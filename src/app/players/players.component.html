@@ -1,0 +1,13 @@
+<div>
+  <label for="league">Select League: </label>
+  <select id="league" (change)="onLeagueChange($event)">
+    <option value="" disabled selected>Select a league</option>
+    <option *ngFor="let league of leagues" [value]="league.id">{{ league.name }}</option>
+  </select>
+</div>
+<div>
+  <h2>Players</h2>
+  <ul>
+    <li *ngFor="let player of players">{{ player.name }}</li>
+  </ul>
+</div>
