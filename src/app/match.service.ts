@@ -1,31 +1,41 @@
 // src/app/services/match.service.ts
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { EnvironmentProviders, Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { TennisMatch } from './tennismatch.model';
+import { environment } from './../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MatchService {
 
-  private apiUrl = 'http://localhost:3000/standings'; // Update with your API URL
-  private apiUrl1 = 'http://localhost:3000/getmatches';
-  private api="http://localhost:3000";
+  //private apiUrl = 'http://localhost:3000/standings/'; // Update with your API URL
+  //private apiUrl1 = 'http://localhost:3000/getmatches/';
+  //private api="http://localhost:3000";
+  
   constructor(private http: HttpClient) { }
 
-  getMatches(): Observable<any[]> {
-    return this.http.get<TennisMatch[]>(this.apiUrl);
+  getMatches(leagueid: number): Observable<any[]> {
+    
+    return this.http.get<TennisMatch[]>(environment.apiUrl+"/standings/"+leagueid);
   }
-  getMatches1(): Observable<any[]> {
-    return this.http.get<TennisMatch[]>(this.apiUrl1);
+  getMatches1(leagueid:number): Observable<any[]> {
+   
+    return this.http.get<TennisMatch[]>(environment.apiUrl+"/getmatches/"+leagueid);
   }
   updateMatchResult(matchId: number, newResult: string): Observable<any> {
     const headers = new HttpHeaders({
       'Content-Type': 'application/json'
     });
-    return this.http.post("http://localhost:3000/update-match-result", { 'id': matchId, 'result': newResult }, { headers });
+    return this.http.post(environment.apiUrl+"/update-match-result", { 'id': matchId, 'result': newResult }, { headers });
   }
-  
+  getLeagues(leagueid: number): Observable<any[]> {
+    let params = new HttpParams().set('id', leagueid);
+    return this.http.get<any[]>(`${environment.apiUrl}/leagues`, { params });
+  }
+  calculateStandings(leagueid: number): Observable<any[]> {
+    return this.http.get<TennisMatch[]>(environment.apiUrl+'/calculate-standings/'+leagueid)
+  }
 
 }

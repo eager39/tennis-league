@@ -2,6 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatchService } from '../match.service';
+import { LeaguesService } from '../league.service';
+import { HttpClient } from '@angular/common/http';
+import { TennisMatch } from '../tennismatch.model';
 
 @Component({
   selector: 'app-matches',
@@ -15,26 +18,60 @@ export class MatchesComponent implements OnInit {
   filteredMatches: any[] = [];
   players: string[] = [];
   weeks: number[] = [];
+  leagues: any[] = [];
+
   selectedPlayer: string = '';
   selectedWeek: number | string = '';
+  selectedLeagueId: string = '';
   editingMatch: any = null;
 
-  constructor(private matchService: MatchService) { }
+  constructor(private matchService: MatchService, private leagueService: LeaguesService,private http: HttpClient) { }
 
   ngOnInit(): void {
+    this.fetchLeagues();
     this.loadMatches();
   }
 
-  loadMatches(): void {
-    this.matchService.getMatches1().subscribe(data => {
-      this.matches = data;
-      this.filteredMatches = data;
+  fetchLeagues(): void {
+    this.leagueService.getLeagues().subscribe(
+      (data) => {
+        this.leagues = data;
+      },
+      (error) => {
+        console.error('Error fetching leagues:', error);
+      }
+    );
+  }
 
-      this.players = Array.from(new Set(data.flatMap(match => [match.home_player, match.away_player])));
-      this.weeks = Array.from(new Set(data.map(match => match.week)));
-    }, error => {
-      console.error('Error fetching matches:', error);
-    });
+  loadMatches(): void {
+    console.log("asdasdasd",this.selectedLeagueId)
+    this.matchService.getMatches1(parseInt(this.selectedLeagueId)).subscribe(
+      (data) => {
+        this.matches = data;
+        this.filteredMatches = data;
+        this.extractPlayersAndWeeks(data);
+      },
+      (error) => {
+        console.error('Error fetching matches:', error);
+      }
+    );
+  }
+
+  onLeagueChange(): void {
+    if (this.selectedLeagueId) {
+      this.leagueService.getMatchesByLeague(this.selectedLeagueId).subscribe(
+        (data) => {
+          this.matches = data;
+          this.extractPlayersAndWeeks(data);  // Ensure players and weeks are updated for the selected league
+          this.filterMatches();
+        },
+        (error) => {
+          console.error('Error fetching matches:', error);
+        }
+      );
+    } else {
+      this.loadMatches();
+    }
   }
 
   filterMatches(): void {
@@ -42,6 +79,11 @@ export class MatchesComponent implements OnInit {
       return (this.selectedPlayer ? match.home_player === this.selectedPlayer || match.away_player === this.selectedPlayer : true)
         && (this.selectedWeek ? match.week === +this.selectedWeek : true);
     });
+  }
+
+  extractPlayersAndWeeks(matches: any[]): void {
+    this.players = Array.from(new Set(matches.flatMap(match => [match.home_player, match.away_player])));
+    this.weeks = Array.from(new Set(matches.map(match => match.week)));
   }
 
   isWinner(match: any, player: string): boolean {
@@ -78,12 +120,33 @@ export class MatchesComponent implements OnInit {
   }
 
   updateResult(matchId: number, newResult: string): void {
-    this.matchService.updateMatchResult(matchId, newResult).subscribe(response => {
-      console.log('Match result updated:', response);
-      this.loadMatches();  // Reload matches to update the UI
-      this.editingMatch = null;  // Reset editing state
-    }, error => {
-      console.error('Error updating match result:', error);
-    });
+   
+   
+    this.matchService.updateMatchResult(matchId, newResult).subscribe(
+      (response) => {
+        
+        console.log('Match result updated:', response);
+        this.loadMatches();  // Reload matches to update the UI
+        
+        this.editingMatch = null;  // Reset editing state
+        this.calculateStandings();
+      },
+      (error) => {
+        console.error('Error updating match result:', error);
+      }
+    );
   }
+  calculateStandings(): void {
+    console.log("WTF")
+    console.log(this.selectedLeagueId)
+    this.matchService.calculateStandings(parseInt(this.selectedLeagueId)).subscribe(
+      (response) => {
+        console.log('Standings calculated:', response);
+        
+      },
+      (error) => {
+        console.error('Error calculating standings:', error);
+      }
+    );
+}
 }

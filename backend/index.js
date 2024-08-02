@@ -1,5 +1,17 @@
 const { match } = require('assert');
-const express = require('express');
+var express = require('express')
+  , fs = require('fs')
+  
+  const https = require("https");
+var privateKey = fs.readFileSync('cert/key.pem').toString();
+var certificate = fs.readFileSync('cert/certificate.pem').toString();  
+const options = {
+    key: fs.readFileSync("cert/key.pem"),                  //Change Private Key Path here
+    cert: fs.readFileSync("cert/certificate.pem"),            //Change Main Certificate Path here
+               //Change Intermediate Certificate Path here
+    };
+// To enable HTTPS
+//var app = module.exports = express({key: privateKey, cert: certificate});
 const mysql = require('mysql');
 const app = express();
 const port = 3000;
@@ -8,6 +20,13 @@ const bodyParser = require('body-parser');
 const { abort } = require('process');
 app.use(cors())
 app.use(bodyParser.json());
+var getIP = require('ipware')().get_ip;
+app.use(function(req, res, next) {
+    var ipInfo = getIP(req);
+    console.log(ipInfo);
+    // { clientIp: '127.0.0.1', clientIpRoutable: false }
+    next();
+});
 // Create MySQL connection
 const connection = mysql.createConnection({
     host: 'localhost',
@@ -15,7 +34,11 @@ const connection = mysql.createConnection({
     password: '', // Replace with your MySQL root password
     database: 'tennis_league'
 });
-
+https.createServer(options, app)
+.listen(8443, function (req, res) {    
+    console.log(res)                    //Change Port Number here (if required, 443 is the standard port for https)
+console.log("Server started at port 3000");   
+})
 connection.connect(err => {
     if (err) throw err;
     console.log('Connected to MySQL database.');
@@ -131,24 +154,27 @@ function generateRandomScore() {
         return `${set1Score}, ${set2Score}, ${set3Score}`;
     }
 }
-app.get('/getmatches', (req, res) => {
-    const query = 'SELECT * FROM schedule';
-  
-    connection.query(query, (err, results) => {
+app.get('/getmatches/:id', (req, res) => {
+    
+    const leagueId = req.params.id;
+    console.log(leagueId)
+    const query = 'SELECT * FROM schedule WHERE league_id = ?';
+    connection.query(query, [leagueId], (err, results) => {
       if (err) {
         console.error('Error fetching matches:', err);
         res.status(500).json({ error: 'An error occurred while fetching matches' });
         return;
-      }
+      }console.log(results)
       res.json(results);
+      
     });
-});
+  });
 // Route to generate and store the round-robin schedule
 app.get('/generate-schedule', (req, res) => {
     let players = [];
 
     // Fetch player names
-    connection.query('SELECT name FROM players', (err, data) => {
+    connection.query('SELECT * FROM players WHERE league_id=6', (err, data) => {
         if (err) {
             console.error('Error fetching players:', err);
             res.status(500).json({ error: 'An error occurred while fetching players' });
@@ -157,6 +183,8 @@ app.get('/generate-schedule', (req, res) => {
 
         // Extract player names from the query result
         players = data.map(row => row.name);
+        console.log(data[0].league_id)
+       let leagueid=6
         console.log(players);
         
     const shuffledPlayers = shuffle(players);
@@ -168,10 +196,10 @@ app.get('/generate-schedule', (req, res) => {
         for (let match = 0; match < alternatedSchedule[week].length; match++) {
             const homePlayer = alternatedSchedule[week][match][0];
             const awayPlayer = alternatedSchedule[week][match][1];
-            const query = 'INSERT INTO schedule (week, home_player, away_player) VALUES (?, ?, ?)';
-            connection.query(query, [week + 1, homePlayer, awayPlayer], (err, results) => {
+            const query = 'INSERT INTO schedule (week, home_player, away_player,league_id) VALUES (?, ?, ?,?)';
+            connection.query(query, [week + 1, homePlayer, awayPlayer,leagueid], (err, results) => {
                 if (err) {
-                    console.error('Error inserting match:', err);
+                  //  console.error('Error inserting match:', err);
                 } else {
                     console.log('Inserted match:', results.insertId);
                 }
@@ -211,100 +239,120 @@ app.get('/randomscores', (req, res) => {
 });
 
 
-app.get('/calculate-standings', (req, res) => {
-    const fetchMatchesQuery = 'SELECT * FROM schedule';
-  
-    connection.query(fetchMatchesQuery, (err, matches) => {
+app.get('/calculate-standings/:id', (req, res) => {
+    let leagueId = req.params.id;
+    const fetchMatchesQuery = 'SELECT * FROM schedule WHERE league_id = ?';
+    const fetchPlayersQuery = 'SELECT DISTINCT home_player AS player FROM schedule WHERE league_id = ? UNION SELECT DISTINCT away_player AS player FROM schedule WHERE league_id = ?';
+
+    console.log('League ID:', leagueId);
+
+    connection.query(fetchMatchesQuery, [leagueId], (err, matches) => {
         if (err) {
             console.error('Error fetching matches:', err);
             res.status(500).json({ error: 'An error occurred while fetching matches' });
             return;
         }
 
-        const standings = {};
-  
-        matches.forEach(match => {
-            if (!match.result) {
-                // If the result is empty, skip this match
-                return;
-            }
-
-            // Split the result into sets
-            const sets = match.result.split(',').map(set => set.trim());
-            if (sets.length < 2) {
-                // If there are not at least two sets, skip this match
-                return;
-            }
-
-            const [set1, set2, set3] = sets;
-            let homeGamesWon = parseInt(set1.split("-")[0]) + parseInt(set2.split("-")[0]);
-            let awayGamesWon = parseInt(set1.split("-")[1]) + parseInt(set2.split("-")[1]);
-
-            if (set3) {
-                homeGamesWon += parseInt(set3.split("-")[0]);
-                awayGamesWon += parseInt(set3.split("-")[1]);
-            }
-
-            const homePlayer = match.home_player;
-            const awayPlayer = match.away_player;
-
-            if (!standings[homePlayer]) {
-                standings[homePlayer] = { points: 0, netGamesWon: 0, matchesPlayed: 0 };
-            }
-            if (!standings[awayPlayer]) {
-                standings[awayPlayer] = { points: 0, netGamesWon: 0, matchesPlayed: 0 };
-            }
-
-            // Increment the matches played count
-            standings[homePlayer].matchesPlayed += 1;
-            standings[awayPlayer].matchesPlayed += 1;
-
-            // Calculate points and net games won
-            if (homeGamesWon > awayGamesWon) {
-                standings[homePlayer].points += 2;
-            } else {
-                standings[awayPlayer].points += 2;
-            }
-
-            standings[homePlayer].netGamesWon += homeGamesWon - awayGamesWon;
-            standings[awayPlayer].netGamesWon += awayGamesWon - homeGamesWon;
-        });
-  
-        // Clear the existing standings
-        const clearStandingsQuery = 'TRUNCATE TABLE standings';
-  
-        connection.query(clearStandingsQuery, err => {
+        connection.query(fetchPlayersQuery, [leagueId, leagueId], (err, players) => {
             if (err) {
-                console.error('Error clearing standings table:', err);
-                res.status(500).json({ error: 'An error occurred while clearing standings table' });
+                console.error('Error fetching players:', err);
+                res.status(500).json({ error: 'An error occurred while fetching players' });
                 return;
             }
 
-            // Insert new standings
-            const insertStandingsQuery = 'INSERT INTO standings (player, points, netGamesWon, matches_played) VALUES ?';
-            const standingsValues = Object.entries(standings).map(([player, stats]) => [player, stats.points, stats.netGamesWon, stats.matchesPlayed]);
-  
-            if (standingsValues.length > 0) {
-                connection.query(insertStandingsQuery, [standingsValues], err => {
-                    if (err) {
-                        console.error('Error inserting standings:', err);
-                        res.status(500).json({ error: 'An error occurred while inserting standings' });
-                        return;
-                    }
-  
-                    res.json({ message: 'Standings calculated and stored successfully' });
-                });
-            } else {
-                res.json({ message: 'No standings to insert' });
-            }
+            const standings = {};
+
+            // Initialize standings for all players
+            players.forEach(player => {
+                standings[player.player] = { points: 0, netGamesWon: 0, matchesPlayed: 0 };
+            });
+
+            matches.forEach(match => {
+                if (!match.result) {
+                    console.log('Skipping match with no result:', match);
+                    return;
+                }
+
+                // Split the result into sets
+                const sets = match.result.split(',').map(set => set.trim());
+                if (sets.length < 2) {
+                    console.log('Skipping match with insufficient sets:', match);
+                    return;
+                }
+
+                const [set1, set2, set3] = sets;
+                let homeGamesWon = parseInt(set1.split("-")[0]) + parseInt(set2.split("-")[0]);
+                let awayGamesWon = parseInt(set1.split("-")[1]) + parseInt(set2.split("-")[1]);
+
+                if (set3) {
+                    homeGamesWon += parseInt(set3.split("-")[0]);
+                    awayGamesWon += parseInt(set3.split("-")[1]);
+                }
+
+                const homePlayer = match.home_player;
+                const awayPlayer = match.away_player;
+
+                if (!standings[homePlayer]) {
+                    standings[homePlayer] = { points: 0, netGamesWon: 0, matchesPlayed: 0 };
+                }
+                if (!standings[awayPlayer]) {
+                    standings[awayPlayer] = { points: 0, netGamesWon: 0, matchesPlayed: 0 };
+                }
+
+                // Increment the matches played count
+                standings[homePlayer].matchesPlayed += 1;
+                standings[awayPlayer].matchesPlayed += 1;
+
+                // Calculate points and net games won
+                if (homeGamesWon > awayGamesWon) {
+                    standings[homePlayer].points += 2;
+                } else {
+                    standings[awayPlayer].points += 2;
+                }
+
+                standings[homePlayer].netGamesWon += homeGamesWon - awayGamesWon;
+                standings[awayPlayer].netGamesWon += awayGamesWon - homeGamesWon;
+            });
+
+            // Clear the existing standings
+            const clearStandingsQuery = 'DELETE FROM standings WHERE league_id = ?';
+
+            connection.query(clearStandingsQuery, [leagueId], err => {
+                if (err) {
+                    console.error('Error clearing standings table:', err);
+                    res.status(500).json({ error: 'An error occurred while clearing standings table' });
+                    return;
+                }
+
+                // Insert new standings
+                const insertStandingsQuery = 'INSERT INTO standings (player, points, netGamesWon, matches_played, league_id) VALUES ?';
+                const standingsValues = Object.entries(standings).map(([player, stats]) => [player, stats.points, stats.netGamesWon, stats.matchesPlayed, leagueId]);
+
+                if (standingsValues.length > 0) {
+                    connection.query(insertStandingsQuery, [standingsValues], err => {
+                        if (err) {
+                            console.error('Error inserting standings:', err);
+                            res.status(500).json({ error: 'An error occurred while inserting standings' });
+                            return;
+                        }
+
+                        res.json({ message: 'Standings calculated and stored successfully' });
+                    });
+                } else {
+                    res.json({ message: 'No standings to insert' });
+                }
+            });
         });
     });
 });
+
   // Get standings from MySQL
-  app.get('/standings', (req, res) => {
-    const query = 'SELECT * FROM standings ORDER BY points DESC, netGamesWon DESC';
+  app.get('/standings/:id', (req, res) => {
+    console.log(req.params.id)
+    const leagueId = req.params.id;
+    const query = 'SELECT * FROM standings WHERE league_id=? ORDER BY points DESC, netGamesWon DESC';
   
-    connection.query(query, (err, results) => {
+    connection.query(query,([leagueId]), (err, results) => {
       if (err) {
         console.error('Error fetching standings:', err);
         res.status(500).json({ error: 'An error occurred while fetching standings' });
@@ -358,6 +406,7 @@ app.get('/calculate-standings', (req, res) => {
 
 
 
-app.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
-});
+
+// app.listen(port, () => {
+//     console.log(`Server is running at https://192.168.0.24:${port}`);
+// });

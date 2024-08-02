@@ -1,31 +1,37 @@
 <!-- src/app/standings/standings.component.html -->
 <div>
-  <h2>Standings</h2>
-  <table mat-table [dataSource]="standings" class="mat-elevation-z8">
-
-    <!-- Player Column -->
-    <ng-container matColumnDef="player">
-      <th mat-header-cell *matHeaderCellDef> Player </th>
-      <td mat-cell *matCellDef="let element"> {{element.player}} </td>
-    </ng-container>
-
-    <!-- Points Column -->
-    <ng-container matColumnDef="points">
-      <th mat-header-cell *matHeaderCellDef> Points </th>
-      <td mat-cell *matCellDef="let element"> {{element.points}} </td>
-    </ng-container>
-
-    <!-- Net Games Won Column -->
-    <ng-container matColumnDef="netGamesWon">
-      <th mat-header-cell *matHeaderCellDef> Net Games Won </th>
-      <td mat-cell *matCellDef="let element"> {{element.netGamesWon}} </td>
-    </ng-container>
-    <ng-container matColumnDef="games_played">
-      <th mat-header-cell *matHeaderCellDef> Games played </th>
-      <td mat-cell *matCellDef="let element"> {{element.matches_played}} </td>
-    </ng-container>
-
-    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-  </table>
+  <label for="league-select">Select League:</label>
+  <select id="league-select" (change)="onLeagueChange($event)">
+    <option *ngFor="let league of leagues" [value]="league.id">{{ league.name }}</option>
+  </select>
 </div>
+
+<table mat-table [dataSource]="filteredStandings" class="mat-elevation-z8">
+    <!-- Position Column -->
+    <ng-container matColumnDef="position">
+      <th mat-header-cell *matHeaderCellDef> Position </th>
+      <td mat-cell *matCellDef="let element; let i = index"> {{i + 1}} </td>
+    </ng-container>
+  <ng-container matColumnDef="player">
+    <th mat-header-cell *matHeaderCellDef> Player </th>
+    <td mat-cell *matCellDef="let element"> {{element.player}} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="points">
+    <th mat-header-cell *matHeaderCellDef> Points </th>
+    <td mat-cell *matCellDef="let element"> {{element.points}} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="netGamesWon">
+    <th mat-header-cell *matHeaderCellDef> Net Games Won </th>
+    <td mat-cell *matCellDef="let element"> {{element.netGamesWon}} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="games_played">
+    <th mat-header-cell *matHeaderCellDef> Games Played </th>
+    <td mat-cell *matCellDef="let element"> {{element.matches_played}} </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+</table>
