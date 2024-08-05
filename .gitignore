@@ -7,10 +7,11 @@
 /bazel-out
 
 # Node
+
 /node_modules
 npm-debug.log
 yarn-error.log
-
+node_modules
 # IDEs and editors
 .idea/
 .project
@@ -40,3 +41,18 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+backend/1_kolo_objava.pdf
+backend/15_kolo_objava.pdf
+backend/14_kolo_objava.pdf
+backend/13_kolo_objava.pdf
+backend/12_kolo_objava.pdf
+backend/11_kolo_objava.pdf
+backend/10_kolo_objava.pdf
+backend/9_kolo_objava.pdf
+backend/8_kolo_objava.pdf
+backend/7_kolo_objava.pdf
+backend/6_kolo_objava.pdf
+backend/5_kolo_objava.pdf
+backend/4_kolo_objava.pdf
+backend/3_kolo_objava.pdf
+backend/2_kolo_objava.pdf

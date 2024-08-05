@@ -1,4 +1,8 @@
-const { match } = require('assert');
+
+
+
+
+
 var express = require('express')
   , fs = require('fs')
   
@@ -18,6 +22,12 @@ const port = 3000;
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { abort } = require('process');
+const pdfparse =require("pdf-parse")
+
+const axios = require('axios');
+const path = require('path');
+const { PDFDocument } = require('pdf-lib');
+const { match } = require('assert');
 app.use(cors())
 app.use(bodyParser.json());
 var getIP = require('ipware')().get_ip;
@@ -35,7 +45,8 @@ const connection = mysql.createConnection({
     database: 'tennis_league'
 });
 https.createServer(options, app)
-.listen(8443, function (req, res) {    
+.listen(8443, function (req, res) {  
+      
     console.log(res)                    //Change Port Number here (if required, 443 is the standard port for https)
 console.log("Server started at port 3000");   
 })
@@ -153,12 +164,265 @@ function generateRandomScore() {
         const set3Score = getValidSetScore();
         return `${set1Score}, ${set2Score}, ${set3Score}`;
     }
+} 
+
+    
+app.get('/parsepdfmoski',async (req,res) => {
+    const url = 'http://www.tenis-radgona.si/images/stories/liga_2024/';
+const fileName = '_kolo_objava.pdf';
+let dataBuffer=""
+for (let i = 1; i < 16; i++) {
+    try {
+        const config = {
+            method: 'get',
+            url: `http://www.tenis-radgona.si/images/stories/liga_2024/${i}_kolo_objava.pdf`,
+            responseType: 'arraybuffer',
+            headers: {
+                // Put your headers here if required
+            },
+        };
+
+        console.log(`Fetching ${i}.pdf...`);
+        const response = await axios(config);
+
+        const filePath = path.join(__dirname, `${i}_kolo_objava.pdf`);
+        dataBuffer= Buffer.from(response.data);
+        console.log(dataBuffer)
+        console.log(`${i}.pdf saved successfully!`);
+    } catch (error) {
+        console.error(`Failed to fetch or save ${i}.pdf:`, error);
+    }
+
+
+    
+    //let dataBuffer = fs.readFileSync("../../../../../../Users/zan_s/Desktop/rezultati lige/"+i+"_kolo_objava.pdf");
+        console.log(dataBuffer)
+pdfparse(dataBuffer).then(function(data) {
+    const lines = data["text"].split('\n').filter(line => line.trim() !== '');
+    const results = [];
+    let currentLeague = '';
+    let currentWeek = '';
+
+    lines.forEach(line => {
+        // Check for league and week information
+        const leagueMatch = line.match(/^(\d+ liga|[^\d].* liga)/);
+        const weekMatch = line.match(/^Rezultati(\d+) kolo/);
+
+        if (weekMatch) {
+            currentWeek = weekMatch[1];
+        }
+
+        if (leagueMatch) {
+            currentLeague = leagueMatch[0].trim();
+        } else {
+            // Match result line
+            const matchDetails = line.match(/^([^:]+):([^0-9]+)([\d:]+(?:[\d:]+)*)$/);
+            if (matchDetails) {
+                const homePlayer = matchDetails[1].trim();
+                const awayPlayer = matchDetails[2].trim();
+                let sets = matchDetails[3];
+
+                // Replace colons with dashes and insert commas between sets if they are missing
+                sets = sets.replace(/:/g, '-').replace(/(\d-\d)(?=\d-\d)/g, '$1,');
+                if(sets=="0-0,0-0,0-0"){
+                    sets = ['No result'];
+                }else{
+                          sets = sets.split(',').map(set => set.trim()).filter(set => !/^0-0$/.test(set));
+                }
+                // Filter out "0-0" sets
+          
+                console.log(sets)
+               
+                // Proceed only if there are valid sets left
+                if (sets.length > 0) {
+                    results.push({
+                        league: currentLeague,
+                        week: currentWeek,
+                        homePlayer,
+                        awayPlayer,
+                        sets
+                    });
+                }
+            }
+        }
+    });
+
+    console.log(results)
+   // console.log(insertScheduleWithResults(results));
+   
+    
+    async function insertScheduleWithResults(parsedResults) {
+        for (const result of parsedResults) {
+            const { league, week, homePlayer, awayPlayer, sets } = result;
+            const resultStr = sets.join(',');
+    
+            // Prepare SQL query for insertion
+            const insertQuery = `
+                INSERT INTO schedule (home_player, away_player, result, league_id, week)
+                VALUES (?, ?, ?, ?, ?)`;
+    
+            const queryParams = [homePlayer, awayPlayer, resultStr, league, week];
+    
+            try {
+                await new Promise((resolve, reject) => {
+                    connection.query(insertQuery, queryParams, (err, results) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve(results);
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error(`Error inserting match for ${homePlayer} vs ${awayPlayer}:`, error);
+            }
+        }
+    }
+    
+   
+})
+    }
+    res.json("success")
+})
+app.get('/parsepdfzenske',async (req,res) => {
+    const url = 'http://www.tenis-radgona.si/images/stories/liga_2024/rezultati_ženske_2024.pdf';
+    let results = [];
+
+    
+        // const config = {
+        //     method: 'get',
+        //     url: `http://www.tenis-radgona.si/images/stories/liga_2024/rezultati_%C5%BEenske_2024.pdf`,
+        //     responseType: 'arraybuffer',
+        //     headers: {
+        //         // Put your headers here if required
+        //     }
+        // }
+        
+
+        // console.log(`Fetching .pdf...`);
+        // const response = await axios(config);
+        // dataBuffer=response.data
+        // console.log(response)
+    
+    let dataBuffer = fs.readFileSync("../../../../../../Users/zan_s/Desktop/rezultati lige/rezultati_ženske_2024.pdf");
+       
+
+    
+    data = await pdfparse(dataBuffer);
+    function parseMatchData(data) {
+        const lines = data["text"].split('\n').filter(line => line.trim() !== '');
+        const results = [];
+        console.log(lines)
+        let currentWeek = '';
+        let result
+        let result1
+        let currentMatch = {};
+        let [homePlayer, awayPlayer]=[]
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+    
+            // Match the week line with optional period and optional space
+            const weekMatch = line.match(/^(\d+\.?\s*kolo)/);
+            if (weekMatch) {
+                currentWeek = weekMatch[1].match(/\d+/)[0];
+                continue;
+            }
+    
+            // Skip the 'rezultat' line
+            if (line.includes(':')) {
+       
+                [homePlayer, awayPlayer] = line.split(':').map(str => str.trim());
+             
+                
+              
+               
+                
+            }
+           
+            // Handle match results
+           
+            console.log(!isNaN(line)+"WTF "+line)
+           
+                if (line === "000000") {
+                    result1 = "No result";
+                    results.push({
+                        week: currentWeek,
+                        homePlayer: homePlayer,
+                        awayPlayer: awayPlayer,
+                        matchResult: result1,
+                        league: 6
+                    });
+                } else {
+                    if ( !isNaN(line)) {
+                    const pairs = line.match(/(\d{2})/g);
+                    const filteredPairs = pairs.filter(pair => !(pair[0] === '0' && pair[1] === '0'));
+                    result1 = filteredPairs.map(pair => pair[0] + '-' + pair[1]).join(',');
+                        
+                        results.push({
+                            week: currentWeek,
+                            homePlayer: homePlayer,
+                            awayPlayer: awayPlayer,
+                            matchResult: result1,
+                            league: 6
+                        });
+                    }
+                }
+             
+            
+     
+               
+            // Handle match details
+        
+        }
+    
+        return results;
+    }
+  
+    const parsedResults = parseMatchData(data)
+
+
+    // Insert results into database
+   console.log(parsedResults)
+    // Insert results into database
+   await insertScheduleWithResults(parsedResults);
+
+    res.json({ message: 'Success', results });
+
+async function insertScheduleWithResults(parsedResults) {
+    for (const result of parsedResults) {
+        console.log(result)
+        const { homePlayer, awayPlayer, matchResult, league, week } = result;
+
+        const insertQuery = `
+            INSERT INTO schedule (home_player, away_player, result, league_id, week)
+            VALUES (?, ?, ?, ?, ?)`;
+
+        const queryParams = [homePlayer, awayPlayer, matchResult, league, week];
+
+        try {
+            await new Promise((resolve, reject) => {
+                connection.query(insertQuery, queryParams, (err, results) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(results);
+                    }
+                });
+            });
+        } catch (error) {
+            console.error(`Error inserting match for ${homePlayer} vs ${awayPlayer}:`, error);
+        }
+    }
 }
+    
+    
+})
+
 app.get('/getmatches/:id', (req, res) => {
     
     const leagueId = req.params.id;
     console.log(leagueId)
-    const query = 'SELECT * FROM schedule WHERE league_id = ?';
+    const query = 'SELECT * FROM schedule WHERE league_id = ? ORDER BY WEEK';
     connection.query(query, [leagueId], (err, results) => {
       if (err) {
         console.error('Error fetching matches:', err);

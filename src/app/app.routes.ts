@@ -6,7 +6,7 @@ import { StandingsComponent } from './standings/standings.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
-  { path: 'players', component: PlayersComponent },
-  { path: 'matches', component: MatchesComponent },
-  { path: 'standings', component: StandingsComponent }
+  { path: 'players/:id', component: PlayersComponent },
+  { path: 'matches/:id', component: MatchesComponent },
+  { path: 'standings/:id', component: StandingsComponent },
 ];

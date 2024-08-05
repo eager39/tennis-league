@@ -1,35 +1,62 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, ViewChild, AfterViewInit, NgModule, ElementRef } from '@angular/core';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatchService } from '../match.service';
 import { LeaguesService } from '../league.service';
-import { HttpClient } from '@angular/common/http';
 import { TennisMatch } from '../tennismatch.model';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelect, MatSelectModule } from '@angular/material/select';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { MatInput, MatInputModule } from '@angular/material/input';
+import { ActivatedRoute, Params } from '@angular/router';
+import { map } from 'rxjs/internal/operators/map';
 
 @Component({
   selector: 'app-matches',
-  standalone: true,
   templateUrl: './matches.component.html',
   styleUrls: ['./matches.component.css'],
-  imports: [CommonModule, FormsModule],
+  standalone: true,
+  imports:[MatFormFieldModule,MatSelectModule,MatSelect,FormsModule,MatTableModule,MatPaginatorModule,CommonModule,ReactiveFormsModule,MatInputModule ]
 })
-export class MatchesComponent implements OnInit {
-  matches: any[] = [];
-  filteredMatches: any[] = [];
+export class MatchesComponent implements OnInit, AfterViewInit {
+  matches: TennisMatch[] = [];
+  dataSource = new MatTableDataSource<TennisMatch>();
   players: string[] = [];
-  weeks: number[] = [];
+  weeks: string[] = [];
   leagues: any[] = [];
+  displayedColumns: string[] = ['week', 'home_player', 'away_player', 'result'];
 
   selectedPlayer: string = '';
   selectedWeek: number | string = '';
-  selectedLeagueId: string = '';
+  selectedLeagueId: number =1;
+  
+  hideNoResults: boolean = false;
+  @ViewChild('resultInput') resultInput!: ElementRef;
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  resultForm: FormGroup;
   editingMatch: any = null;
+  
 
-  constructor(private matchService: MatchService, private leagueService: LeaguesService,private http: HttpClient) { }
+  constructor(private matchService: MatchService, private leagueService: LeaguesService,private route: ActivatedRoute,private fb: FormBuilder) {
+    this.resultForm = this.fb.group({
+      newResult: ['', [Validators.required, this.tennisScoreValidator]]
+    });
+   }
 
   ngOnInit(): void {
     this.fetchLeagues();
     this.loadMatches();
+    this.route.params.subscribe(
+      (params: Params) => {
+        this.selectedLeagueId = +params["id"];
+        console.log(this.selectedLeagueId);
+        this.loadMatches()
+      })
+}
+
+  ngAfterViewInit() {
+    this.dataSource.paginator = this.paginator;
   }
 
   fetchLeagues(): void {
@@ -44,25 +71,29 @@ export class MatchesComponent implements OnInit {
   }
 
   loadMatches(): void {
-    console.log("asdasdasd",this.selectedLeagueId)
-    this.matchService.getMatches1(parseInt(this.selectedLeagueId)).subscribe(
-      (data) => {
-        this.matches = data;
-        this.filteredMatches = data;
-        this.extractPlayersAndWeeks(data);
-      },
-      (error) => {
-        console.error('Error fetching matches:', error);
-      }
-    );
+    if (this.selectedLeagueId) {
+      this.matchService.getMatches1(this.selectedLeagueId).subscribe(
+        (data) => {
+          this.matches = data;
+          this.dataSource.data = data;
+          this.extractPlayersAndWeeks(data);
+          this.filterMatches();
+        },
+        (error) => {
+          console.error('Error fetching matches:', error);
+        }
+      );
+    }
   }
 
   onLeagueChange(): void {
     if (this.selectedLeagueId) {
       this.leagueService.getMatchesByLeague(this.selectedLeagueId).subscribe(
         (data) => {
+          console.log(data)
           this.matches = data;
-          this.extractPlayersAndWeeks(data);  // Ensure players and weeks are updated for the selected league
+          this.dataSource.data = data;
+          this.extractPlayersAndWeeks(data);
           this.filterMatches();
         },
         (error) => {
@@ -75,78 +106,115 @@ export class MatchesComponent implements OnInit {
   }
 
   filterMatches(): void {
-    this.filteredMatches = this.matches.filter(match => {
-      return (this.selectedPlayer ? match.home_player === this.selectedPlayer || match.away_player === this.selectedPlayer : true)
-        && (this.selectedWeek ? match.week === +this.selectedWeek : true);
-    });
+    // Ensure that `this.selectedWeek` and `this.selectedPlayer` are properly defined
+    const playerFilter = this.selectedPlayer ? (match: TennisMatch) => 
+      match.home_player === this.selectedPlayer || match.away_player === this.selectedPlayer 
+      : () => true;
+  
+    const weekFilter = this.selectedWeek ? (match: TennisMatch) => 
+      match.week === this.selectedWeek 
+      : () => true;
+  
+    this.dataSource.data = this.matches.filter(match => playerFilter(match) && weekFilter(match));
   }
 
-  extractPlayersAndWeeks(matches: any[]): void {
+  extractPlayersAndWeeks(matches: TennisMatch[]): void {
     this.players = Array.from(new Set(matches.flatMap(match => [match.home_player, match.away_player])));
     this.weeks = Array.from(new Set(matches.map(match => match.week)));
   }
 
-  isWinner(match: any, player: string): boolean {
-    const sets = match.result.split(',').map((set: string) => set.trim().split('-').map(Number));
-    const homeWins = sets.filter((set: number[]) => set[0] > set[1]).length;
-    const awayWins = sets.filter((set: number[]) => set[1] > set[0]).length;
-    const winner = homeWins > awayWins ? match.home_player : match.away_player;
-    return player === winner;
-  }
-
-  isLoser(match: any, player: string): boolean {
-    const sets = match.result.split(',').map((set: string) => set.trim().split('-').map(Number));
-    const homeWins = sets.filter((set: number[]) => set[0] > set[1]).length;
-    const awayWins = sets.filter((set: number[]) => set[1] > set[0]).length;
-    const loser = homeWins > awayWins ? match.away_player : match.home_player;
-    return player === loser;
-  }
-
-  getGamesWon(match: any, player: string): number {
-    const sets = match.result.split(',').map((set: string) => set.trim().split('-').map(Number));
-    const gamesWon = sets.reduce((acc: number, set: number[]) => {
-      if (player === match.home_player) {
-        return acc + set[0];
-      } else {
-        return acc + set[1];
-      }
-    }, 0);
-    return gamesWon;
-  }
-
   editResult(match: any): void {
     this.editingMatch = match;
-    match.newResult = match.result;  // Pre-fill the input with the current result
+    this.resultForm.patchValue({
+      newResult: match.result
+    });
+    setTimeout(() => {
+      this.resultInput.nativeElement.focus();
+    }, 10);
+  }
+  updateResult(matchId: number): void {
+    if (this.resultForm.valid) {
+      const updatedResult = this.resultForm.value.newResult;
+      // Call your service to update the result
+      this.matchService.updateMatchResult(matchId, updatedResult).subscribe(() => {
+        this.editingMatch.result = updatedResult;
+        this.editingMatch = null;
+        this.calculateStandings()
+      });
+    }
   }
 
-  updateResult(matchId: number, newResult: string): void {
-   
-   
-    this.matchService.updateMatchResult(matchId, newResult).subscribe(
-      (response) => {
-        
-        console.log('Match result updated:', response);
-        this.loadMatches();  // Reload matches to update the UI
-        
-        this.editingMatch = null;  // Reset editing state
-        this.calculateStandings();
-      },
-      (error) => {
-        console.error('Error updating match result:', error);
-      }
-    );
-  }
   calculateStandings(): void {
-    console.log("WTF")
-    console.log(this.selectedLeagueId)
-    this.matchService.calculateStandings(parseInt(this.selectedLeagueId)).subscribe(
+    this.matchService.calculateStandings(this.selectedLeagueId).subscribe(
       (response) => {
         console.log('Standings calculated:', response);
-        
       },
       (error) => {
         console.error('Error calculating standings:', error);
       }
     );
-}
+  }
+  tennisScoreValidator(control: any): { [key: string]: boolean } | null {
+    const value = control.value;
+    const regex = /^(\d+-\d+,)*\d+-\d+$/; // Regular expression for tennis scores
+    if (!regex.test(value)) {
+      return { invalidTennisScore: true };
+    }
+    
+    const sets = value.split(',').map((set: string) => set.split('-').map(Number));
+    
+    let homeWins = 0;
+    let awayWins = 0;
+
+    for (const [x, y] of sets) {
+      if (
+        (x < 0 || x > 7 || y < 0 || y > 7) || // Scores must be between 0 and 7
+        (x === 7 && y < 5) || (y === 7 && x < 5) || // To win 7, opponent must have at least 5
+        (x === 7 && y > 6) || (y === 7 && x > 6) || // Valid 7-score pairs are 7-5 or 7-6
+        (x > 6 && y > 6) || // Both cannot be more than 6
+        (x === 5 && y === 6) || (x === 6 && y === 5) // Scores like 5-6 or 6-5 are not valid
+      ) {
+        return { invalidSetScores: true };
+      }
+      
+      if (x > y) {
+        homeWins++;
+      } else {
+        awayWins++;
+      }
+
+      if (homeWins > 2 && awayWins == 1) {
+        console.log(homeWins,awayWins+"1")
+        if (sets.length > 2) {
+          return { extraSet: true };
+        }
+      }else if(homeWins == 1 && awayWins > 2) {
+        console.log(homeWins,awayWins+"2")
+        if (sets.length > 2) {
+          return { extraSet: true };
+        }
+
+      }else if(homeWins >= 2 && awayWins==0){
+        if (sets.length > 2) {
+          return { extraSet: true };
+        }
+        }else if(homeWins == 0 && awayWins >=2){
+          if (sets.length > 2) {
+            return { extraSet: true };
+          }
+          }
+
+      
+    }
+
+    return null;
+  }
+  onFocusOut(event: FocusEvent): void {
+    // Check if focus is moving outside the form
+    const target = event.relatedTarget as HTMLElement;
+    if (!target || !target.closest('form')) {
+      this.editingMatch = null;
+    }
+  }
+  
 }

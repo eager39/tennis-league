@@ -19,7 +19,7 @@ export class LeaguesService {
   getPlayersByLeague(leagueId: string): Observable<any> {
     return this.http.get(`${environment.apiUrl}/leagues/${leagueId}/players`);
   }
-  getMatchesByLeague(leagueId: string): Observable<any> {
+  getMatchesByLeague(leagueId: number): Observable<any> {
     return this.http.get(`${environment.apiUrl+"/getmatches/"}${leagueId}`);
   }
   

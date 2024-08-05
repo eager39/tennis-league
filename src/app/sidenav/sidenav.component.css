@@ -1,0 +1,36 @@
+.sidenav-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  mat-sidenav {
+    width: 250px;
+  }
+  
+  mat-nav-list {
+    width: 100%;
+  }
+  
+  mat-expansion-panel {
+    width: 100%;
+  }
+  
+  .mat-expansion-panel-header-title {
+    display: flex;
+    align-items: center;
+  }
+  
+  .mat-expansion-panel-header-title span[icon] {
+    margin-right: 8px;
+  }
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 30px; /* Adjust the gap as needed */
+}
+
+.material-icons {
+    font-size: 24px; /* Adjust the size as needed */
+    vertical-align: middle;
+}

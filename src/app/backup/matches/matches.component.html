@@ -1,0 +1,55 @@
+<div>
+  <label for="league-select">Select League:</label>
+  <select id="league-select" [(ngModel)]="selectedLeagueId" (change)="onLeagueChange()">
+    <option value="">--Select a league--</option>
+    <option *ngFor="let league of leagues" [value]="league.id">{{ league.name }}</option>
+  </select>
+</div>
+
+<h2>Matches</h2>
+
+<div>
+  <label for="playerFilter">Filter by Player:</label>
+  <select id="playerFilter" [(ngModel)]="selectedPlayer" (change)="filterMatches()">
+    <option value="">All Players</option>
+    <option *ngFor="let player of players" [value]="player">{{ player }}</option>
+  </select>
+
+  <label for="weekFilter">Filter by Week:</label>
+  <select id="weekFilter" [(ngModel)]="selectedWeek" (change)="filterMatches()">
+    <option value="">All Weeks</option>
+    <option *ngFor="let week of weeks" [value]="week">{{ week }}</option>
+  </select>
+</div>
+
+<ul>
+  <li *ngFor="let match of filteredMatches">
+    {{ match.week }}: 
+    <span>{{ match.home_player }}</span> 
+    <span 
+      [ngClass]="{ 'winner': isWinner(match, match.home_player), 'loser': isLoser(match, match.home_player) }"
+      (dblclick)="editResult(match)"
+    >
+      <!-- Result for Home Player -->
+    </span> 
+    vs 
+    <span 
+      [ngClass]="{ 'winner': isWinner(match, match.away_player), 'loser': isLoser(match, match.away_player) }"
+      (dblclick)="editResult(match)"
+    >
+      <!-- Result for Away Player -->
+    </span> 
+    <span>{{ match.away_player }}</span> 
+
+    <span (dblclick)="editResult(match)">
+      {{ match.result }}
+    </span>
+
+    <div *ngIf="editingMatch && editingMatch.id === match.id">
+      <form (ngSubmit)="updateResult(match.id, match.newResult)">
+        <input [(ngModel)]="match.newResult" name="newResult" placeholder="Enter result (e.g., 6-4, 4-6, 6-3)" required />
+        <button type="submit">Update Result</button>
+      </form>
+    </div>
+  </li>
+</ul>

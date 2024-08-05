@@ -1,55 +1,73 @@
-<div>
-  <label for="league-select">Select League:</label>
-  <select id="league-select" [(ngModel)]="selectedLeagueId" (change)="onLeagueChange()">
-    <option value="">--Select a league--</option>
-    <option *ngFor="let league of leagues" [value]="league.id">{{ league.name }}</option>
-  </select>
-</div>
+<!-- <div>
+  <mat-form-field  appearance="fill">
+    <mat-label>Select League</mat-label>
+    <mat-select [(ngModel)]="selectedLeagueId" (ngModelChange)="onLeagueChange()">
+      <mat-option *ngFor="let league of leagues" [value]="league.id">
+        {{ league.name }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field> -->
 
-<h2>Matches</h2>
+  <div>
+    <label for="playerFilter">Filter by Player:</label>
+    <mat-form-field appearance="fill">
+      <mat-label>Select Player</mat-label>
+      <mat-select id="playerFilter" [(ngModel)]="selectedPlayer" (ngModelChange)="filterMatches()">
+        <mat-option value="">All Players</mat-option>
+        <mat-option *ngFor="let player of players" [value]="player">{{ player }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  
+    <label for="weekFilter">Filter by Week:</label>
+    <mat-form-field appearance="fill">
+      <mat-label>Select Week</mat-label>
+      <mat-select id="weekFilter" [(ngModel)]="selectedWeek" (ngModelChange)="filterMatches()">
+        <mat-option value="">All Weeks</mat-option>
+        <mat-option *ngFor="let week of weeks" [value]="week">{{ week }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
 
-<div>
-  <label for="playerFilter">Filter by Player:</label>
-  <select id="playerFilter" [(ngModel)]="selectedPlayer" (change)="filterMatches()">
-    <option value="">All Players</option>
-    <option *ngFor="let player of players" [value]="player">{{ player }}</option>
-  </select>
+<table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+  <ng-container matColumnDef="week">
+    <th mat-header-cell *matHeaderCellDef> Week </th>
+    <td mat-cell *matCellDef="let match"> {{ match.week }} </td>
+  </ng-container>
 
-  <label for="weekFilter">Filter by Week:</label>
-  <select id="weekFilter" [(ngModel)]="selectedWeek" (change)="filterMatches()">
-    <option value="">All Weeks</option>
-    <option *ngFor="let week of weeks" [value]="week">{{ week }}</option>
-  </select>
-</div>
+  <ng-container matColumnDef="home_player">
+    <th mat-header-cell *matHeaderCellDef> Home Player </th>
+    <td mat-cell *matCellDef="let match"> {{ match.home_player }} </td>
+  </ng-container>
 
-<ul>
-  <li *ngFor="let match of filteredMatches">
-    {{ match.week }}: 
-    <span>{{ match.home_player }}</span> 
-    <span 
-      [ngClass]="{ 'winner': isWinner(match, match.home_player), 'loser': isLoser(match, match.home_player) }"
-      (dblclick)="editResult(match)"
-    >
-      <!-- Result for Home Player -->
-    </span> 
-    vs 
-    <span 
-      [ngClass]="{ 'winner': isWinner(match, match.away_player), 'loser': isLoser(match, match.away_player) }"
-      (dblclick)="editResult(match)"
-    >
-      <!-- Result for Away Player -->
-    </span> 
-    <span>{{ match.away_player }}</span> 
+  <ng-container matColumnDef="away_player">
+    <th mat-header-cell *matHeaderCellDef> Away Player </th>
+    <td mat-cell *matCellDef="let match"> {{ match.away_player }} </td>
+  </ng-container>
 
-    <span (dblclick)="editResult(match)">
-      {{ match.result }}
-    </span>
+  <ng-container matColumnDef="result">
+    <th mat-header-cell *matHeaderCellDef> Result </th>
+    <td mat-cell *matCellDef="let match">
+      <span *ngIf="editingMatch !== match" (dblclick)="editResult(match)">{{match.result}}</span>
+      <div *ngIf="editingMatch === match">
+        <form [formGroup]="resultForm" (ngSubmit)="updateResult(match.id)" (focusout)="onFocusOut($event)">
+          <input #resultInput matInput formControlName="newResult"  placeholder="Enter result (e.g., 6-4, 4-6, 6-3)" required />
+          <button mat-button type="submit" [disabled]="resultForm.invalid">Update</button>
+        </form>
+        <div *ngIf="resultForm.controls['newResult'].errors?.['invalidTennisScore']">
+          <small class="error">Napačni podatki</small>
+        </div>
+        <div *ngIf="resultForm.controls['newResult'].errors?.['invalidSetScores']">
+          <small class="error">Napačni rezultati setov.</small>
+        </div>
+        <div *ngIf="resultForm.controls['newResult'].errors?.['extraSet']">
+          <small class="error">Po dveh dobljenih nizih dodatni niso dovoljeni.</small>
+        </div>
+      </div>
+    </td>
+  </ng-container>
 
-    <div *ngIf="editingMatch && editingMatch.id === match.id">
-      <form (ngSubmit)="updateResult(match.id, match.newResult)">
-        <input [(ngModel)]="match.newResult" name="newResult" placeholder="Enter result (e.g., 6-4, 4-6, 6-3)" required />
-        <button type="submit">Update Result</button>
-      </form>
-    </div>
-  </li>
-</ul>
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+</table>
+
+<mat-paginator [pageSize]="8" showFirstLastButtons></mat-paginator>

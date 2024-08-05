@@ -1,10 +1,10 @@
 <!-- src/app/standings/standings.component.html -->
-<div>
+<!-- <div>
   <label for="league-select">Select League:</label>
   <select id="league-select" (change)="onLeagueChange($event)">
     <option *ngFor="let league of leagues" [value]="league.id">{{ league.name }}</option>
   </select>
-</div>
+</div> -->
 
 <table mat-table [dataSource]="filteredStandings" class="mat-elevation-z8">
     <!-- Position Column -->

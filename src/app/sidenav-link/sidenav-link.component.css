@@ -1,0 +1,20 @@
+a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+  }
+  
+  a:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+  
+  a span[icon] {
+    margin-right: 8px;
+  }
+  
+  .active {
+    background-color: rgba(172, 0, 0, 0.1);
+  }
