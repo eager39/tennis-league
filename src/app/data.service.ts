@@ -1,9 +1,12 @@
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
+import { environment } from '../environments/environment.development';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DataService {
+  constructor(private http: HttpClient) { }
   players = [
     { id: 1, name: 'Player 1' },
     { id: 2, name: 'Player 2' },
@@ -19,8 +22,9 @@ export class DataService {
     return this.players;
   }
 
-  getMatches() {
-    return this.matches;
+  getMyMatches(userid:number) {
+    let params = new HttpParams().set('id', userid);
+    return this.http.get<any[]>(`${environment.apiUrl}/getMyMatches`, { params });
   }
 
   getStandings() {

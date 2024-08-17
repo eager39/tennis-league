@@ -13,6 +13,7 @@ import { RouterModule, Routes }   from '@angular/router';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../auth.service'; // Assume AuthService is created to handle auth logic
 
 @Component({
   selector: 'app-sidenav',
@@ -22,5 +23,6 @@ import { CommonModule } from '@angular/common';
   styleUrl: './sidenav.component.css'
 })
 export class SidenavComponent {
+  constructor(public authService: AuthService) { }
   
 }

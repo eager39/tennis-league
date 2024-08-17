@@ -47,7 +47,8 @@
   <ng-container matColumnDef="result">
     <th mat-header-cell *matHeaderCellDef> Result </th>
     <td mat-cell *matCellDef="let match">
-      <span *ngIf="editingMatch !== match" (dblclick)="editResult(match)">{{match.result}}</span>
+      <span  *ngIf="(editingMatch !== match && !checkNames(match.home_player))" >{{match.result}}</span>
+      <span  *ngIf="(editingMatch !== match && checkNames(match.home_player))"  (dblclick)="editResult(match) ">{{match.result}}</span>
       <div *ngIf="editingMatch === match">
         <form [formGroup]="resultForm" (ngSubmit)="updateResult(match.id)" (focusout)="onFocusOut($event)">
           <input #resultInput matInput formControlName="newResult"  placeholder="Enter result (e.g., 6-4, 4-6, 6-3)" required />
@@ -64,6 +65,10 @@
         </div>
       </div>
     </td>
+  </ng-container>
+  <ng-container matColumnDef="deadline">
+    <th mat-header-cell *matHeaderCellDef> Rok za tekmo </th>
+    <td mat-cell *matCellDef="let match"> {{ match.deadline }} </td>
   </ng-container>
 
   <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>

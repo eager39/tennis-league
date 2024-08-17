@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
 import { MatInput, MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Params } from '@angular/router';
 import { map } from 'rxjs/internal/operators/map';
-
+import { AuthService } from '../auth.service';
 @Component({
   selector: 'app-matches',
   templateUrl: './matches.component.html',
@@ -25,7 +25,7 @@ export class MatchesComponent implements OnInit, AfterViewInit {
   players: string[] = [];
   weeks: string[] = [];
   leagues: any[] = [];
-  displayedColumns: string[] = ['week', 'home_player', 'away_player', 'result'];
+  displayedColumns: string[] = ['week', 'home_player', 'away_player', 'result','deadline'];
 
   selectedPlayer: string = '';
   selectedWeek: number | string = '';
@@ -38,7 +38,7 @@ export class MatchesComponent implements OnInit, AfterViewInit {
   editingMatch: any = null;
   
 
-  constructor(private matchService: MatchService, private leagueService: LeaguesService,private route: ActivatedRoute,private fb: FormBuilder) {
+  constructor(private matchService: MatchService, private leagueService: LeaguesService,private route: ActivatedRoute,private fb: FormBuilder,private AuthService: AuthService) {
     this.resultForm = this.fb.group({
       newResult: ['', [Validators.required, this.tennisScoreValidator]]
     });
@@ -53,6 +53,9 @@ export class MatchesComponent implements OnInit, AfterViewInit {
         console.log(this.selectedLeagueId);
         this.loadMatches()
       })
+}
+checkNames(name:string){
+return this.AuthService.userMatchesPlayer(name)
 }
 
   ngAfterViewInit() {
@@ -69,7 +72,7 @@ export class MatchesComponent implements OnInit, AfterViewInit {
       }
     );
   }
-
+ 
   loadMatches(): void {
     if (this.selectedLeagueId) {
       this.matchService.getMatches1(this.selectedLeagueId).subscribe(
@@ -216,5 +219,7 @@ export class MatchesComponent implements OnInit, AfterViewInit {
       this.editingMatch = null;
     }
   }
+  
+  
   
 }
