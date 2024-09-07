@@ -1,1 +1,77 @@
-<p>dashboardadmin works!</p>
+<div>
+    <label for="playerFilter">Filter by Player:</label>
+    <mat-form-field appearance="fill">
+      <mat-label>Select Player</mat-label>
+      <mat-select id="playerFilter" [(ngModel)]="selectedPlayer" (ngModelChange)="filterMatches()">
+        <mat-option value="">All Players</mat-option>
+        <mat-option *ngFor="let player of players" [value]="player">{{ player }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  
+    <label for="weekFilter">Filter by Week:</label>
+    <mat-form-field appearance="fill">
+      <mat-label>Select Week</mat-label>
+      <mat-select id="weekFilter" [(ngModel)]="selectedWeek" (ngModelChange)="filterMatches()">
+        <mat-option value="">All Weeks</mat-option>
+        <mat-option *ngFor="let week of weeks" [value]="week">{{ week }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <label for="weekFilter">Filtriraj lige</label>
+    <mat-form-field appearance="fill">
+      <mat-label>Izberi ligo</mat-label>
+      <mat-select id="weekFilter" [(ngModel)]="selectedLeagueId" (ngModelChange)="filterMatches()">
+        <mat-option value="">Lige</mat-option>
+        <mat-option *ngFor="let league of leagues" [value]="league.id">{{ league.name }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+ 
+
+<table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+  <ng-container matColumnDef="week">
+    <th mat-header-cell *matHeaderCellDef> Week </th>
+    <td mat-cell *matCellDef="let match"> {{ match.week }} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="home_player">
+    <th mat-header-cell *matHeaderCellDef> Home Player </th>
+    <td mat-cell *matCellDef="let match"> {{ match.home_player }} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="away_player">
+    <th mat-header-cell *matHeaderCellDef> Away Player </th>
+    <td mat-cell *matCellDef="let match"> {{ match.away_player }} </td>
+  </ng-container>
+
+  <ng-container matColumnDef="result">
+    <th mat-header-cell *matHeaderCellDef> Result </th>
+    <td mat-cell *matCellDef="let match">
+      <span  *ngIf="(editingMatch !== match && !checkNames(match.home_player))" >{{match.result}}</span>
+      <span  *ngIf="(editingMatch !== match && checkNames(match.home_player))"  (dblclick)="editResult(match) ">{{match.result}}</span>
+      <div *ngIf="editingMatch === match">
+        <form [formGroup]="resultForm" (ngSubmit)="updateResult(match.id)" (focusout)="onFocusOut($event)">
+          <input #resultInput matInput formControlName="newResult"  placeholder="Enter result (e.g., 6-4, 4-6, 6-3)" required />
+          <button mat-button type="submit" [disabled]="resultForm.controls['newResult'].errors?.['invalidTennisScore']">Update</button>
+        </form>
+        <div *ngIf="resultForm.controls['newResult'].errors?.['invalidTennisScore']">
+          <small class="error">Napačni podatki</small>
+        </div>
+        <div *ngIf="resultForm.controls['newResult'].errors?.['invalidSetScores']">
+          <small class="error">Napačni rezultati setov.</small>
+        </div>
+        <div *ngIf="resultForm.controls['newResult'].errors?.['extraSet']">
+          <small class="error">Po dveh dobljenih nizih dodatni niso dovoljeni.</small>
+        </div>
+      </div>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="deadline">
+    <th mat-header-cell *matHeaderCellDef> Rok za tekmo </th>
+    <td mat-cell *matCellDef="let match"> {{ match.deadline| date: 'dd-MM-yyyy' }} </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+</table>
+
+<mat-paginator [pageSize]="8" showFirstLastButtons></mat-paginator>

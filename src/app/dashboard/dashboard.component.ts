@@ -33,7 +33,7 @@ export class DashboardComponent {
   dataSourceFinished = new MatTableDataSource<TennisMatch>();
   dataSourcePendingResults = new MatTableDataSource<TennisMatch>();
 
-  displayedColumnsUpcoming: string[] = ['week', 'home_player', 'away_player', 'deadline', 'phone_away'];
+  displayedColumnsUpcoming: string[] = ['week', 'home_player', 'away_player', 'deadline', 'phone_away','forfeit'];
   displayedColumnsFinished: string[] = ['week', 'home_player', 'away_player', 'result', 'deadline'];
   displayedColumnsPendingResults: string[] = ['week', 'home_player', 'away_player', 'result', 'deadline', 'phone_away'];
 
@@ -46,12 +46,31 @@ export class DashboardComponent {
     this.DataService.getMyMatches(id).subscribe(
       (data) => {
         this.matches = data;
-        const now = new Date().getTime();
-        console.log(this.matches[0].deadline,now)
+       
+      
         // Filter data into categories
-        this.upcomingMatches = this.matches.filter(match =>   match.deadline > now);
-        this.finishedMatches = this.matches.filter(match => match.result !== 'No result');
-        this.pendingResultsMatches = this.matches.filter(match => match.result === 'No result' && match.deadline <= now);
+        const oneWeek = 7 * 24 * 60 * 60 * 1000; // One week in milliseconds
+
+// Current time
+const now = Date.now();
+
+// Upcoming Matches: Matches whose deadlines are within 7 days from now
+// One week in milliseconds
+const twoWeeks = 14 * 24 * 60 * 60 * 1000; // Two weeks in milliseconds
+
+// Upcoming Matches: Show only if deadline is between 2 weeks and 1 week away
+this.upcomingMatches = this.matches.filter(match => {
+    const deadline = match.deadline;
+    return deadline > now + oneWeek && deadline <= now + twoWeeks && match.result === 'No result';
+});
+
+// Finished Matches: Matches that are completed
+this.finishedMatches = this.matches.filter(match => match.result != 'No result' && match.result_confirmed==1);
+
+this.pendingResultsMatches = this.matches.filter(match => {
+  const deadline = match.deadline;
+  return  (match.result!="No result" && match.result_confirmed==0) ;
+});
 
         // Update data sources for tables
         this.dataSourceUpcoming.data = this.upcomingMatches;
@@ -72,9 +91,37 @@ export class DashboardComponent {
     // Compare the current user's username with the away_player field
     return this.AuthService.getUserId() == match.away_player_id;
   }
-  confirmResult(matchId: number) {
+  confirmResult(match: any) {
     // Logic to confirm the result by the away player
-    alert('Result confirmed for match ID: ' + matchId);
+   if(match.result!="No result"){
+    this.matchService.confirmResult(match.id).subscribe(
+      (data) => {
+        
+    alert('Result confirmed for match ID: '+data + match);
+
+      })
+   }
+    
+  }
+  forfeitMatch(match:any): void {
+    let result=''
+    if(match.home_player_id==this.AuthService.getUserId()){
+      result="0-6,0-6"
+    }else{
+      result="6-0,6-0"
+    }
+    // Call your match service to update the match status
+    this.matchService.forfeitMatch(match.id,result).subscribe(
+      response => {
+        // Handle success, e.g., refresh the data
+        console.log('Match forfeited successfully', response);
+        // Optionally reload the data
+       this.loadMatches()
+      },
+      error => {
+        console.error('Error forfeiting match', error);
+      }
+    );
   }
   selectedPlayer: string = '';
   selectedWeek: number | string = '';

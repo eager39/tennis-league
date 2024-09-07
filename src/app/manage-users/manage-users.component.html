@@ -1,0 +1,73 @@
+<div class="user-management-container">
+    <h1>Manage Users and Link with Players</h1>
+  
+    <!-- User List Section -->
+    <mat-card class="user-list-card">
+      <mat-card-title>User List</mat-card-title>
+      <mat-table [dataSource]="dataSourceUsers" class="mat-elevation-z8">
+        <ng-container matColumnDef="username">
+          <th mat-header-cell *matHeaderCellDef> Ime </th>
+          <td mat-cell *matCellDef="let user"> {{ user.name }} </td>
+        </ng-container>
+  
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef> Email </th>
+          <td mat-cell *matCellDef="let user"> {{ user.email }} </td>
+        </ng-container>
+  
+        <ng-container matColumnDef="player">
+            <th mat-header-cell *matHeaderCellDef> Linked Player </th>
+            <td mat-cell *matCellDef="let user">
+              <mat-select [(value)]="user.playerId" (selectionChange)="onPlayerLink(user)">
+                <mat-option *ngFor="let player of players" [value]="player.id">
+                  {{ player.name }}
+                </mat-option>
+              </mat-select>
+            </td>
+          </ng-container>
+  
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef> Actions </th>
+          <td mat-cell *matCellDef="let user">
+            <button mat-button (click)="editUser(user)">Edit</button>
+            <button mat-button color="warn" (click)="deleteUser(user)">Delete</button>
+          </td>
+        </ng-container>
+  
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </mat-table>
+    </mat-card>
+  
+    <!-- User Form Section -->
+    <mat-card class="user-form-card">
+      <mat-card-title>{{ editingUser ? 'Edit User' : 'Add New User' }}</mat-card-title>
+      <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+        <mat-form-field appearance="fill">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" placeholder="Enter username" />
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill">
+          <mat-label>Email</mat-label>
+          <input matInput formControlName="email" placeholder="Enter email" />
+        </mat-form-field>
+  
+        <mat-form-field appearance="fill">
+          <mat-label>Link to Player</mat-label>
+          <mat-select formControlName="playerId">
+            <mat-option *ngFor="let player of players" [value]="player.id">
+              {{ player.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+  
+        <div class="form-actions">
+          <button mat-button type="submit" [disabled]="userForm.invalid">
+            {{ editingUser ? 'Update User' : 'Add User' }}
+          </button>
+          <button mat-button type="button" (click)="resetForm()">Cancel</button>
+        </div>
+      </form>
+    </mat-card>
+  </div>

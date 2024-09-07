@@ -24,18 +24,35 @@ export class MatchService {
    
     return this.http.get<TennisMatch[]>(environment.apiUrl+"/getmatches/"+leagueid);
   }
+  unplayedMatches(): Observable<any[]> {
+   
+    return this.http.get<TennisMatch[]>(environment.apiUrl+"/unplayedMatches/");
+  }
   updateMatchResult(matchId: number, newResult: string): Observable<any> {
     const headers = new HttpHeaders({
       'Content-Type': 'application/json'
     });
     return this.http.post(environment.apiUrl+"/update-match-result", { 'id': matchId, 'result': newResult }, { headers });
   }
-  getLeagues(leagueid: number): Observable<any[]> {
-    let params = new HttpParams().set('id', leagueid);
-    return this.http.get<any[]>(`${environment.apiUrl}/leagues`, { params });
+  getLeagues(): Observable<any[]> {
+  
+    return this.http.get<any[]>(`${environment.apiUrl}/leagues`);
   }
   calculateStandings(leagueid: number): Observable<any[]> {
     return this.http.get<TennisMatch[]>(environment.apiUrl+'/calculate-standings/'+leagueid)
+  }
+
+  confirmResult(matchId: number): Observable<any> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.post(environment.apiUrl+"/confirmResult", { 'id': matchId }, { headers });
+  }
+  forfeitMatch(matchId: number,result:string): Observable<any> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.post(environment.apiUrl+"/forfeitMatch", { 'id': matchId,'result':result }, { headers });
   }
 
 }

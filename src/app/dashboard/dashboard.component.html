@@ -1,41 +1,51 @@
 <div class="dashboard-container">
     <mat-accordion multi="true">
   
-      <!-- Upcoming Matches Section -->
-      <mat-expansion-panel>
-        <mat-expansion-panel-header>
-          <mat-panel-title>Prihajajoče tekme</mat-panel-title>
-        </mat-expansion-panel-header>
-        <table mat-table [dataSource]="dataSourceUpcoming" class="mat-elevation-z8">
-          <ng-container matColumnDef="week">
-            <th mat-header-cell *matHeaderCellDef> Teden </th>
-            <td mat-cell *matCellDef="let match"> {{ match.week }} </td>
-          </ng-container>
-  
-          <ng-container matColumnDef="home_player">
-            <th mat-header-cell *matHeaderCellDef> Domači igralec </th>
-            <td mat-cell *matCellDef="let match"> {{ match.home_player }} </td>
-          </ng-container>
-  
-          <ng-container matColumnDef="away_player">
-            <th mat-header-cell *matHeaderCellDef> Gostujoči igralec </th>
-            <td mat-cell *matCellDef="let match"> {{ match.away_player }} </td>
-          </ng-container>
-  
-          <ng-container matColumnDef="deadline">
-            <th mat-header-cell *matHeaderCellDef> Rok za tekmo </th>
-            <td mat-cell *matCellDef="let match"> {{ match.deadline | date: 'dd-MM-yyyy' }} </td>
-          </ng-container>
-  
-          <ng-container matColumnDef="phone_away">
-            <th mat-header-cell *matHeaderCellDef> Telefonska številka nasprotnika </th>
-            <td mat-cell *matCellDef="let match"> {{ match.phone_away }} </td>
-          </ng-container>
-  
-          <tr mat-header-row *matHeaderRowDef="displayedColumnsUpcoming"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumnsUpcoming;"></tr>
-        </table>
-      </mat-expansion-panel>
+        <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>Prihajajoče tekme</mat-panel-title>
+            </mat-expansion-panel-header>
+            <table mat-table [dataSource]="dataSourceUpcoming" class="mat-elevation-z8">
+              <!-- Existing Columns -->
+          
+              <ng-container matColumnDef="week">
+                <th mat-header-cell *matHeaderCellDef> Teden </th>
+                <td mat-cell *matCellDef="let match"> {{ match.week }} </td>
+              </ng-container>
+          
+              <ng-container matColumnDef="home_player">
+                <th mat-header-cell *matHeaderCellDef> Domači igralec </th>
+                <td mat-cell *matCellDef="let match"> {{ match.home_player }} </td>
+              </ng-container>
+          
+              <ng-container matColumnDef="away_player">
+                <th mat-header-cell *matHeaderCellDef> Gostujoči igralec </th>
+                <td mat-cell *matCellDef="let match"> {{ match.away_player }} </td>
+              </ng-container>
+          
+              <ng-container matColumnDef="deadline">
+                <th mat-header-cell *matHeaderCellDef> Rok za tekmo </th>
+                <td mat-cell *matCellDef="let match"> {{ match.deadline | date: 'dd-MM-yyyy' }} </td>
+              </ng-container>
+          
+              <ng-container matColumnDef="phone_away">
+                <th mat-header-cell *matHeaderCellDef> Telefonska številka nasprotnika </th>
+                <td mat-cell *matCellDef="let match"> {{ match.phone_away }} </td>
+              </ng-container>
+          
+              <!-- New Column for Forfeit Button -->
+              <ng-container matColumnDef="forfeit">
+                <th mat-header-cell *matHeaderCellDef> Forfeit </th>
+                <td mat-cell *matCellDef="let match">
+                  <button mat-button (click)="forfeitMatch(match)">Forfeit Match</button>
+                </td>
+              </ng-container>
+          
+              <!-- Header and Row Definitions -->
+              <tr mat-header-row *matHeaderRowDef="displayedColumnsUpcoming"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumnsUpcoming;"></tr>
+            </table>
+          </mat-expansion-panel>
   
       <!-- Finished Matches Section -->
       <mat-expansion-panel>
@@ -121,7 +131,7 @@
               <!-- If the user is the away player, allow them to confirm the score -->
               <span *ngIf="isAwayPlayer(match)">
                 <span>{{ match.result }}</span>
-                <button mat-flat-button (click)="confirmResult(match.id)">Potrdi rezultat</button>
+                <button mat-flat-button *ngIf="(match.result!='No result' && match.result_confirmed==0) " (click)="confirmResult(match)">Potrdi rezultat</button>
               </span>
             </td>
           </ng-container>

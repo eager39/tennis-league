@@ -14,11 +14,12 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth.service'; // Assume AuthService is created to handle auth logic
+import { MatFormField } from '@angular/material/form-field';
 
 @Component({
   selector: 'app-sidenav',
   standalone: true,
-  imports: [MatCommonModule, SidenavLinkComponent,MatIconModule,CommonModule,MatExpansionModule,MatListModule,MatButtonModule,MatSidenavModule,MatMenuModule,MatToolbarModule,MatTooltipModule,RouterModule,MatCommonModule],
+  imports: [MatFormField,MatCommonModule, SidenavLinkComponent,MatIconModule,CommonModule,MatExpansionModule,MatListModule,MatButtonModule,MatSidenavModule,MatMenuModule,MatToolbarModule,MatTooltipModule,RouterModule,MatCommonModule],
   templateUrl: './sidenav.component.html',
   styleUrl: './sidenav.component.css'
 })

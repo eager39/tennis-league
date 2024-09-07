@@ -4,7 +4,7 @@
 
 
 var express = require('express')
-  , fs = require('fs')
+  var fs = require('fs')
   
   const https = require("https");
 
@@ -17,7 +17,7 @@ const options = {
 //var app = module.exports = express({key: privateKey, cert: certificate});
 const mysql = require('mysql');
 const app = express();
-
+app.enable('trust proxy');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 
@@ -64,7 +64,7 @@ function shuffle(array) {
     return array;
 }
 async function updateScheduleWithDates() {
-    console.log("haha")
+    
     const startDate = moment('2024-05-26'); // Start date as the last week of May
   
     // Query to get all matches ordered by week
@@ -113,10 +113,29 @@ async function updateScheduleWithDates() {
   updateScheduleWithDates();
    res.json(true)
   })
+  app.get('/getSeasons',async (req,res) => {
+    const query = `
+    SELECT 
+       *
+    FROM 
+        season
+`;
+connection.query(query,  (err, results) => {
+  if (err) {
+    console.error('Error fetching seasons:', err);
+    res.status(500).json({ error: 'An error occurred while fetching matches' });
+    return;
+  }
+  res.json(results);
+  
+});
+  
+    
+    })
  
   app.get('/getMyMatches', (req, res) => {
     const userid = req.query.id;
-
+    const season=req.headers.season
     // Query to fetch all matches in the league for the user
     const query = `
         SELECT s.*, 
@@ -125,15 +144,15 @@ async function updateScheduleWithDates() {
                COALESCE(p1.user_id, 'Unknown') AS home_player_id, 
                COALESCE(p2.user_id, 'Unknown') AS away_player_id,
                COALESCE(p1.phone, 'Unknown') AS phone_home,
-               COALESCE(p2.phone, 'Unknown') AS phone_away
+               COALESCE(p2.phone, 'Unknown') AS phone_away,s.result_confirmed
         FROM schedule s
         LEFT JOIN players p1 ON s.home_player = p1.id
         LEFT JOIN players p2 ON s.away_player = p2.id
-        WHERE (s.home_player = ? OR s.away_player = ?)
+        WHERE (s.home_player = ? OR s.away_player = ?) and season=?
         ORDER BY s.week ASC;
     `;
 
-    connection.query(query, [userid, userid], (err, data) => {
+    connection.query(query, [userid, userid,season], (err, data) => {
         if (err) {
             console.error('Error fetching matches:', err);
             res.status(500).json({ error: 'An error occurred while fetching matches' });
@@ -141,9 +160,10 @@ async function updateScheduleWithDates() {
         }
 
         // If data is found, return it; otherwise, you might want to handle the case where no matches are found
-        if (data.length === 0) {
+        if (data.length == 0) {
             res.json({ message: 'No matches found in the league for the user.' });
         } else {
+           
             res.json(data);
         }
     });
@@ -164,7 +184,7 @@ function generateRoundRobinSchedule(playerIds) {
         for (let match = 0; match < matchesPerRound; match++) {
             const home = (round + match) % (numPlayers - 1);
             const away = (numPlayers - 1 - match + round) % (numPlayers - 1);
-            if (match === 0) {
+            if (match == 0) {
                 roundMatches.push([playerIds[home], playerIds[numPlayers - 1]]);
             } else {
                 roundMatches.push([playerIds[home], playerIds[away]]);
@@ -186,7 +206,7 @@ function assignHomeAway(schedule) {
         round.forEach(match => {
             const [home, away] = match;
 
-            if (home === null || away === null) {
+            if (home == null || away == null) {
                 // Skip matches with dummy players
                 return;
             }
@@ -197,7 +217,7 @@ function assignHomeAway(schedule) {
             const homeLastWeek = homeAwayMap.get(home);
             const awayLastWeek = homeAwayMap.get(away);
 
-            if (homeLastWeek === 'home') {
+            if (homeLastWeek == 'home') {
                 roundMatches.push([away, home]);
                 homeAwayMap.set(home, 'away');
                 homeAwayMap.set(away, 'home');
@@ -276,7 +296,7 @@ app.get('/parsepdfmoski', async (req, res) => {
                         let sets = matchDetails[3];
 
                         sets = sets.replace(/:/g, '-').replace(/(\d-\d)(?=\d-\d)/g, '$1,');
-                        if (sets === "0-0,0-0,0-0") {
+                        if (sets == "0-0,0-0,0-0") {
                             sets = ['No result'];
                         } else {
                             sets = sets.split(',').map(set => set.trim()).filter(set => !/^0-0$/.test(set));
@@ -317,7 +337,15 @@ app.get('/parsepdfmoski', async (req, res) => {
             if (homePlayerId && awayPlayerId) {
                 const insertQuery = `
                     INSERT INTO schedule (home_player, away_player, result, league_id, week, season, deadline)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)`;
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE 
+result = CASE 
+    WHEN result = 'No result' THEN VALUES(result) 
+    ELSE result 
+END, 
+league_id = VALUES(league_id), 
+week = VALUES(week), 
+deadline = VALUES(deadline);`;
 
                 const queryParams = [homePlayerId, awayPlayerId, resultStr, league, week, '1', deadline];
 
@@ -327,6 +355,7 @@ app.get('/parsepdfmoski', async (req, res) => {
                             if (err) {
                                 reject(err);
                             } else {
+                                console.log(results)
                                 resolve(results);
                             }
                         });
@@ -399,7 +428,7 @@ app.get('/parsepdfzenske', async (req, res) => {
             }
 
             // Handle match results
-            if (line === "000000") {
+            if (line == "000000") {
                 results.push({
                     week: currentWeek,
                     homePlayer: homePlayer,
@@ -410,7 +439,7 @@ app.get('/parsepdfzenske', async (req, res) => {
                 });
             } else if (!isNaN(line)) {
                 const pairs = line.match(/(\d{2})/g);
-                const filteredPairs = pairs.filter(pair => !(pair[0] === '0' && pair[1] === '0'));
+                const filteredPairs = pairs.filter(pair => !(pair[0] == '0' && pair[1] == '0'));
                 const resultStr = filteredPairs.map(pair => pair[0] + '-' + pair[1]).join(',');
 
                 results.push({
@@ -450,10 +479,18 @@ app.get('/parsepdfzenske', async (req, res) => {
 
             if (homePlayerId && awayPlayerId) {
                 const insertQuery = `
-                    INSERT INTO schedule (home_player, away_player, result, league_id, week, deadline,season)
-                    VALUES (?, ?, ?, ?, ?, ?,?)`;
+                    INSERT INTO schedule (home_player, away_player, result, league_id, week, season, deadline)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE 
+result = CASE 
+    WHEN result = 'No result' THEN VALUES(result) 
+    ELSE result 
+END, 
+league_id = VALUES(league_id), 
+week = VALUES(week), 
+deadline = VALUES(deadline);`;
 
-                const queryParams = [homePlayerId, awayPlayerId, matchResult, league, week, deadline,'1'];
+                const queryParams = [homePlayerId, awayPlayerId, matchResult, league, week,'1', deadline];
 
                 try {
                     await new Promise((resolve, reject) => {
@@ -461,6 +498,7 @@ app.get('/parsepdfzenske', async (req, res) => {
                             if (err) {
                                 reject(err);
                             } else {
+                                console.log(results)
                                 resolve(results);
                             }
                         });
@@ -570,42 +608,20 @@ app.get('/generate-schedule', (req, res) => {
     });
 });
 
-function updateScores() {
-    console.log("Updating scores...");
 
-    connection.query('SELECT id FROM schedule', (err, matches) => {
-        if (err) {
-            console.error('Error fetching matches:', err);
-            return;
-        }
 
-        for (const match of matches) {
-            const randomScore = generateRandomScore();
-            connection.query('UPDATE schedule SET result = ? WHERE id = ?', [randomScore, match.id], (err) => {
-                if (err) {
-                    console.error('Error updating match:', err);
-                } else {
-                    console.log(`Updated match ID ${match.id} with score ${randomScore}`);
-                }
-            });
-        }
-    });
-}
 
-app.get('/randomscores', (req, res) => {
-    updateScores();
-    res.json({message: "Scores updated!"});
-});
 
 
 app.get('/calculate-standings/:id', (req, res) => {
     let leagueId = req.params.id;
+
     const fetchMatchesQuery = `
         SELECT 
             s.home_player,
-            hp.name AS home_player,
+            hp.id AS home_player_id,
             s.away_player,
-            ap.name AS away_player,
+            ap.id AS away_player_id,
             s.result
         FROM 
             schedule s
@@ -619,7 +635,7 @@ app.get('/calculate-standings/:id', (req, res) => {
 
     const fetchPlayersQuery = `
         SELECT DISTINCT 
-            hp.name AS player
+            hp.id as id
         FROM 
             schedule s
         JOIN 
@@ -628,7 +644,7 @@ app.get('/calculate-standings/:id', (req, res) => {
             s.league_id = ?
         UNION
         SELECT DISTINCT 
-            ap.name AS player
+            ap.id as id
         FROM 
             schedule s
         JOIN 
@@ -636,8 +652,6 @@ app.get('/calculate-standings/:id', (req, res) => {
         WHERE 
             s.league_id = ?
     `;
-
-    console.log('League ID:', leagueId);
 
     connection.query(fetchMatchesQuery, [leagueId], (err, matches) => {
         if (err) {
@@ -657,57 +671,168 @@ app.get('/calculate-standings/:id', (req, res) => {
 
             // Initialize standings for all players
             players.forEach(player => {
-                standings[player.player] = { points: 0, netGamesWon: 0, matchesPlayed: 0 };
+                standings[player.id] = { points: 0, netGamesWon: 0, setsPlayed: 0, netSetsWon: 0, matchesPlayed: 0, matchesWon: 0 };
             });
 
             matches.forEach(match => {
                 if (!match.result) {
-                    console.log('Skipping match with no result:', match);
-                    return;
+                    return;  // Skip matches with no result
                 }
 
-                // Split the result into sets
                 const sets = match.result.split(',').map(set => set.trim());
                 if (sets.length < 2) {
-                    console.log('Skipping match with insufficient sets:', match);
-                    return;
+                    return;  // Skip invalid match results
                 }
 
-                const [set1, set2, set3] = sets;
-                let homeGamesWon = parseInt(set1.split("-")[0]) + parseInt(set2.split("-")[0]);
-                let awayGamesWon = parseInt(set1.split("-")[1]) + parseInt(set2.split("-")[1]);
+                let homeSetsWon = 0;
+                let awaySetsWon = 0;
 
-                if (set3) {
-                    homeGamesWon += parseInt(set3.split("-")[0]);
-                    awayGamesWon += parseInt(set3.split("-")[1]);
-                }
+                sets.forEach(set => {
+                    const [homeGames, awayGames] = set.split("-").map(Number);
+                    if (homeGames > awayGames) {
+                        homeSetsWon += 1;
+                    } else if (awayGames > homeGames) {
+                        awaySetsWon += 1;
+                    }
+                });
 
-                const homePlayer = match.home_player;
-                const awayPlayer = match.away_player;
+                const homePlayerId = match.home_player_id;
+                const awayPlayerId = match.away_player_id;
 
-                if (!standings[homePlayer]) {
-                    standings[homePlayer] = { points: 0, netGamesWon: 0, matchesPlayed: 0 };
-                }
-                if (!standings[awayPlayer]) {
-                    standings[awayPlayer] = { points: 0, netGamesWon: 0, matchesPlayed: 0 };
-                }
+                standings[homePlayerId].matchesPlayed += 1;
+                standings[awayPlayerId].matchesPlayed += 1;
 
-                // Increment the matches played count
-                standings[homePlayer].matchesPlayed += 1;
-                standings[awayPlayer].matchesPlayed += 1;
-
-                // Calculate points and net games won
-                if (homeGamesWon > awayGamesWon) {
-                    standings[homePlayer].points += 2;
+                if (homeSetsWon > awaySetsWon) {
+                    standings[homePlayerId].points += 2;
+                    standings[homePlayerId].matchesWon += 1;
                 } else {
-                    standings[awayPlayer].points += 2;
+                    standings[awayPlayerId].points += 2;
+                    standings[awayPlayerId].matchesWon += 1;
                 }
 
-                standings[homePlayer].netGamesWon += homeGamesWon - awayGamesWon;
-                standings[awayPlayer].netGamesWon += awayGamesWon - homeGamesWon;
+                const homeGamesWon = sets.reduce((acc, set) => acc + parseInt(set.split("-")[0]), 0);
+                const awayGamesWon = sets.reduce((acc, set) => acc + parseInt(set.split("-")[1]), 0);
+
+                standings[homePlayerId].netGamesWon += homeGamesWon - awayGamesWon;
+                standings[awayPlayerId].netGamesWon += awayGamesWon - homeGamesWon;
+
+                standings[homePlayerId].netSetsWon += homeSetsWon - awaySetsWon;
+                standings[awayPlayerId].netSetsWon += awaySetsWon - homeSetsWon;
+
+                standings[homePlayerId].setsPlayed += homeSetsWon + awaySetsWon;
+                standings[awayPlayerId].setsPlayed += homeSetsWon + awaySetsWon;
             });
 
-            // Clear the existing standings
+            const reorderStandings = () => {
+                const playerIds = Object.keys(standings);
+
+                playerIds.sort((playerA, playerB) => {
+                    const pointsDiff = standings[playerB].points - standings[playerA].points;
+                    if (pointsDiff !== 0) {
+                        return pointsDiff;
+                    }
+
+                    const tiedPlayers = playerIds.filter(playerId => standings[playerId].points == standings[playerA].points);
+
+                    if (tiedPlayers.length == 2) {
+                        const player1 = tiedPlayers[0];
+                        const player2 = tiedPlayers[1];
+
+                        const headToHeadMatch = matches.find(match =>
+                            (match.home_player_id == player1 && match.away_player_id == player2) ||
+                            (match.home_player_id == player2 && match.away_player_id == player1)
+                        );
+
+                        if (headToHeadMatch && headToHeadMatch.result) {
+                            const sets = headToHeadMatch.result.split(',').map(set => set.trim());
+                            const homeGamesWon = sets.reduce((acc, set) => acc + parseInt(set.split("-")[0]), 0);
+                            const awayGamesWon = sets.reduce((acc, set) => acc + parseInt(set.split("-")[1]), 0);
+
+                            if (homeGamesWon > awayGamesWon) {
+                                return headToHeadMatch.home_player_id == player1 ? 1 : -1;
+                            } else {
+                                return headToHeadMatch.away_player_id == player2 ? -1 : 1;
+                            }
+                        }
+                    } else if (tiedPlayers.length > 2) {
+                      
+                        const pointsAgainstEachOther = {};
+                        const winsAgainstEachOther = {};
+
+                        tiedPlayers.forEach(player => {
+                            pointsAgainstEachOther[player] = 0;
+                            winsAgainstEachOther[player] = 0;
+                        });
+
+                        const checkedPairs = new Set();
+
+                        tiedPlayers.forEach((playerA, indexA) => {
+                            tiedPlayers.slice(indexA + 1).forEach(playerB => {
+                                const pairIdentifier = [playerA, playerB].sort().join('-');
+                                if (!checkedPairs.has(pairIdentifier)) {
+                                    checkedPairs.add(pairIdentifier);
+
+                                    const match = matches.find(m =>
+                                        (m.home_player_id == playerA && m.away_player_id == playerB) ||
+                                        (m.home_player_id == playerB && m.away_player_id == playerA)
+                                    );
+
+                                    if (match && match.result) {
+                                        const sets = match.result.split(',').map(set => set.trim());
+                                        const homeGamesWon = sets.reduce((acc, set) => acc + parseInt(set.split("-")[0]), 0);
+                                        const awayGamesWon = sets.reduce((acc, set) => acc + parseInt(set.split("-")[1]), 0);
+
+                                        if (match.home_player_id == playerA) {
+                                            winsAgainstEachOther[homeGamesWon > awayGamesWon ? playerA : playerB] += 1;
+                                        } else {
+                                            winsAgainstEachOther[homeGamesWon > awayGamesWon ? playerB : playerA] += 1;
+                                        }
+                                    }
+                                }
+                            });
+                        });
+
+                        tiedPlayers.sort((playerA, playerB) => {
+                            const match = matches.find(m =>
+                                (m.home_player_id == playerA && m.away_player_id == playerB) ||
+                                (m.home_player_id == playerB && m.away_player_id == playerA)
+                            );
+                    
+                            if (match && match.result) {
+                                const sets = match.result.split(',').map(set => set.trim());
+                                const homeGamesWon = sets.reduce((acc, set) => acc + parseInt(set.split("-")[0]), 0);
+                                const awayGamesWon = sets.reduce((acc, set) => acc + parseInt(set.split("-")[1]), 0);
+                    
+                                // Determine who won the head-to-head
+                                if (match.home_player_id == playerA) {
+                                    return homeGamesWon > awayGamesWon ? -1 : 1;
+                                } else {
+                                    return awayGamesWon > homeGamesWon ? -1 : 1;
+                                }
+                            }
+                    
+                            
+                        });
+                  
+                        // If still tied on head-to-head, sort by net sets won
+                        if (winsAgainstEachOther[tiedPlayers[0]] == winsAgainstEachOther[tiedPlayers[1]]) {
+                            tiedPlayers.sort((playerA, playerB) => standings[playerB].netSetsWon - standings[playerA].netSetsWon);
+                        }
+                    
+                        // If still tied on net sets won, sort by net games won
+                        if (standings[tiedPlayers[0]].netSetsWon == standings[tiedPlayers[1]].netSetsWon) {
+                            tiedPlayers.sort((playerA, playerB) => standings[playerB].netGamesWon - standings[playerA].netGamesWon);
+                        }
+                        // Final sorting of all players based on standings
+                       return tiedPlayers.indexOf(playerA) - tiedPlayers.indexOf(playerB);
+                    }
+                });
+               
+                return playerIds;
+            };
+
+            const orderedPlayerIds = reorderStandings();
+          
             const clearStandingsQuery = 'DELETE FROM standings WHERE league_id = ?';
 
             connection.query(clearStandingsQuery, [leagueId], err => {
@@ -717,9 +842,18 @@ app.get('/calculate-standings/:id', (req, res) => {
                     return;
                 }
 
-                // Insert new standings
-                const insertStandingsQuery = 'INSERT INTO standings (player, points, netGamesWon, matches_played, league_id,season_id,week) VALUES ?';
-                const standingsValues = Object.entries(standings).map(([player, stats]) => [player, stats.points, stats.netGamesWon, stats.matchesPlayed, leagueId,'1','all']);
+                const insertStandingsQuery = 'INSERT INTO standings (player, points, netGamesWon, setsPlayed, netSetsWon, matches_played, league_id, season_id, week) VALUES ?';
+                const standingsValues = orderedPlayerIds.map(playerId => [
+                    playerId,
+                    standings[playerId].points,
+                    standings[playerId].netGamesWon,
+                    standings[playerId].setsPlayed,
+                    standings[playerId].netSetsWon,
+                    standings[playerId].matchesPlayed,
+                    leagueId,
+                    '1',  // Example season_id
+                    'all'
+                ]);
 
                 if (standingsValues.length > 0) {
                     connection.query(insertStandingsQuery, [standingsValues], err => {
@@ -742,7 +876,7 @@ app.get('/calculate-standings/:id', (req, res) => {
   app.get('/standings/:id', (req, res) => {
     console.log(req.params.id)
     const leagueId = req.params.id;
-    const query = 'SELECT * FROM standings WHERE league_id=? ORDER BY points DESC, netGamesWon DESC';
+    const query = 'SELECT * FROM standings LEFT JOIN players on standings.player=players.id WHERE standings.league_id=? ORDER BY standings.id ASC'
   
     connection.query(query,([leagueId]), (err, results) => {
       if (err) {
@@ -781,7 +915,34 @@ app.get('/calculate-standings/:id', (req, res) => {
       res.json(results);
     });
   });
-  
+  app.post('/confirmResult', (req, res) => {
+    
+    const { id } = req.body;
+    const query = 'UPDATE schedule SET result_confirmed = 1 WHERE id = ?';
+    connection.query(query, [id], (err, results) => {
+        if (err) {
+          console.error('Error updating match result:', err);
+          res.status(500).json({ error: 'An error occurred while updating match result' });
+          return;
+        }
+    
+        res.json({ message: 'Rezultat je bil uspešno potrjen' });
+      });
+  })
+  app.post('/forfeitMatch', (req, res) => {
+    
+    const { id,result } = req.body;
+    const query = 'UPDATE schedule SET result_confirmed = 1,result=? WHERE id = ?';
+    connection.query(query, [result,id], (err, results) => {
+        if (err) {
+          console.error('Error updating match result:', err);
+          res.status(500).json({ error: 'An error occurred while updating match result' });
+          return;
+        }
+    
+        res.json({ message: 'Tekma je bila predana' });
+      });
+  })
   app.get('/leagues/:id/players', (req, res) => {
     const leagueId = req.params.id;
     const query = 'SELECT * FROM players WHERE league_id = ? ORDER BY name ASC';
@@ -795,6 +956,65 @@ app.get('/calculate-standings/:id', (req, res) => {
       res.json(results);
     });
   });
+  app.get('/unplayedMatches', (req, res) => {
+    const leagueId = req.params.id;
+    const query = `
+ SELECT schedule.id, players.name AS home_player, players2.name AS away_player, schedule.result,schedule.week,schedule.deadline,schedule.league_id FROM schedule JOIN players AS players ON schedule.home_player = players.id JOIN players AS players2 ON schedule.away_player = players2.id WHERE schedule.result = 'No result' ORDER BY schedule.week;
+`;
+  
+    connection.query(query, [leagueId], (err, results) => {
+      if (err) {
+        console.error('Error fetching players:', err);
+        res.status(500).json({ error: 'An error occurred while fetching players' });
+        return;
+      }
+      res.json(results);
+    });
+  });
+  app.get('/getplayers', (req, res) => {
+    const leagueId = req.params.id;
+    const query = 'SELECT * FROM players    ';
+  
+    connection.query(query, [leagueId], (err, results) => {
+      if (err) {
+        console.error('Error fetching players:', err);
+        res.status(500).json({ error: 'An error occurred while fetching players' });
+        return;
+      }
+      res.json(results);
+    });
+  });
+  app.get('/getUsers', (req, res) => {
+    const leagueId = req.params.id;
+    const query = `
+    SELECT *,users.id, users.name, players.id AS playerId
+    FROM users
+    LEFT JOIN players ON users.id = players.user_id;
+  `;
+  
+    connection.query(query, [leagueId], (err, results) => {
+      if (err) {
+        console.error('Error fetching players:', err);
+        res.status(500).json({ error: 'An error occurred while fetching players' });
+        return;
+      }
+      res.json(results);
+    });
+  });
+  app.post('/linkplayer', (req, res) => {
+    
+    const { userid,playerid } = req.body;
+    const query = 'UPDATE players SET user_id = ? WHERE id = ?';
+    connection.query(query, [userid,playerid], (err, results) => {
+        if (err) {
+          console.error('Error updating match result:', err);
+          res.status(500).json({ error: 'An error occurred while updating match result' });
+          return;
+        }
+    
+        res.json({ message: 'Tekma je bila predana' });
+      });
+  })
   app.post('/register', (req, res) => {
     users=[]
     const { name,phone,email, password } = req.body;

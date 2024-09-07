@@ -19,7 +19,7 @@ import { switchMap } from 'rxjs/internal/operators/switchMap';
 export class StandingsComponent implements OnInit {
   standings: any[] = [];
   filteredStandings: any[] = [];
-  displayedColumns: string[] = ['position','player', 'points', 'netGamesWon', 'games_played'];
+  displayedColumns: string[] = ['position','player', 'points', 'netGamesWon','setsPlayed','netSetsWon', 'games_played'];
   leagues: any[] = []; // Array to hold leagues data
   selectedLeague: string='' 
   myParam: any;
@@ -41,7 +41,7 @@ export class StandingsComponent implements OnInit {
   }
 
   loadLeagues(): void {
-    this.matchService.getLeagues(parseInt(this.selectedLeague)).subscribe(data => {
+    this.matchService.getLeagues().subscribe(data => {
       this.leagues = data;
       console.log('Leagues:', this.leagues); // Add console log
     }, error => {

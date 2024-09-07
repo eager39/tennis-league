@@ -10,12 +10,13 @@
             <mat-expansion-panel-header>
               <app-sidenav-link>
                 <span class="material-icons">dashboard</span>
-                <span>Moja liga</span>
+                <span *ngIf="(authService.isAuthenticated()&& authService.hasRole('user'))">Moja liga</span>
+                <span *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin'))">Upravljaj ligo</span>
               </app-sidenav-link>
             </mat-expansion-panel-header>
             <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('user'))" routerLink="dashboard">Pregled<span></span></app-sidenav-link>
             <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin'))" routerLink="dashboardadmin">Pregled<span></span></app-sidenav-link>
-      
+            <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin'))" routerLink="manageusers">Upravljaj uporabnike in igralce<span></span></app-sidenav-link>
           </mat-expansion-panel>
           
           <mat-expansion-panel>

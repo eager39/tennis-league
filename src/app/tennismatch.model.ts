@@ -5,4 +5,5 @@ export interface TennisMatch {
     home_player: string;
     away_player: string;
     result: string;
+    league_id:number
 }
