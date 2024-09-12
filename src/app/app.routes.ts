@@ -9,6 +9,7 @@ import { RegisterComponent } from './register/register.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { DashboardadminComponent } from './dashboardadmin/dashboardadmin.component';
 import { ManageUsersComponent } from './manage-users/manage-users.component';
+import { ManageleagueComponent } from './manageleague/manageleague.component';
 export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'players/:id', component: PlayersComponent },
@@ -19,5 +20,6 @@ export const routes: Routes = [
   { path: 'logout', component: RegisterComponent },
   { path: 'dashboard', component: DashboardComponent ,canActivate:[RoleGuard],data: { roles: ['user'] }},
   { path: 'dashboardadmin', component: DashboardadminComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }},
-  { path: 'manageusers', component: ManageUsersComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }}
+  { path: 'manageusers', component: ManageUsersComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }},
+  { path: 'manageleague', component: ManageleagueComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }}
 ];

@@ -22,5 +22,10 @@ export class LeaguesService {
   getMatchesByLeague(leagueId: number): Observable<any> {
     return this.http.get(`${environment.apiUrl+"/getmatches/"}${leagueId}`);
   }
+  endLeague(): Observable<any> {
+   
+    return this.http.post(environment.apiUrl+"/endLeague", {});
+  }
+
   
 }
