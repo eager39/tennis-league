@@ -7,3 +7,9 @@ export interface TennisMatch {
     result: string;
     league_id:number
 }
+export interface leagues {
+ league_id:number;
+ id:number;
+ name:string;
+ tier:number;
+}

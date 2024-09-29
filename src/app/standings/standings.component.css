@@ -1,0 +1,13 @@
+.example-element-detail {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .example-element-detail-row {
+    height: 0;
+  }
+  
+  .mat-elevation-z8 {
+    margin: 10px 0;
+  }

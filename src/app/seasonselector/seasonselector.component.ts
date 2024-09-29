@@ -13,13 +13,13 @@ import { Router } from '@angular/router';
 })
 export class SeasonselectorComponent {
   // Example seasons
-  currentSeason!: number;
-seasons :any
+  currentSeason: number=1;
+seasons :any[]=[]
   constructor(private seasonService: SeasonService,private router: Router) {
     this.seasonService.currentSeason$.subscribe(season => this.currentSeason = season);
   }
   ngOnInit(): void {
-    this.seasons=this.seasonService.getSeasons().subscribe(data=>{
+    this.seasonService.getSeasons().subscribe(data=>{
       this.seasons=data
       console.log(this.seasons)
     })

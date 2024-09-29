@@ -36,6 +36,15 @@ export class DataService {
    
     return this.http.post(environment.apiUrl+"/linkplayer", { 'userid': userid, 'playerid': playerid });
   }
+  registerForLeague(form:object): Observable<any> {
+   
+    return this.http.post(environment.apiUrl+"/registerForLeagueNonUserPlayers", { form });
+  }
+  registerForLeagueRegisteredPlayers(form:object): Observable<any> {
+   
+    return this.http.post(environment.apiUrl+"/registerForLeagueRegisteredPlayers", { form });
+  }
+ 
 
   getStandings() {
     // Calculate standings based on matches

@@ -33,7 +33,11 @@ export class AuthService {
 
   isAuthenticated(): boolean {
     const token = this.getToken();
-   
+   if(this.jwtHelper.isTokenExpired(token)){
+    if (isPlatformBrowser(this.platformId)) {
+     localStorage.removeItem('token'); 
+     }
+   }
     return token ? !this.jwtHelper.isTokenExpired(token) : false;
   }
   getUserRoles(): string[] {

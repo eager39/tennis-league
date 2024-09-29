@@ -15,7 +15,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth.service'; // Assume AuthService is created to handle auth logic
 import { MatFormField } from '@angular/material/form-field';
-
+import { LeaguesService } from '../league.service';
+import { SeasonService } from '../season.service';
+import { leagues, TennisMatch } from '../tennismatch.model';
 @Component({
   selector: 'app-sidenav',
   standalone: true,
@@ -24,6 +26,25 @@ import { MatFormField } from '@angular/material/form-field';
   styleUrl: './sidenav.component.css'
 })
 export class SidenavComponent {
-  constructor(public authService: AuthService) { }
+  leagues: leagues[]=[];
+  constructor(public authService: AuthService,private leagueService: LeaguesService,private seasonService: SeasonService) { }
+  
+  ngOnInit(): void {
+ this.fetchLeagues();
+ this.seasonService.currentSeason$.subscribe((seasonId: any) => {
+  this.fetchLeagues()
+});
+}
+fetchLeagues(): void {
+  this.leagueService.getLeagues().subscribe({
+    next: (data: leagues[]) => {
+      this.leagues = data; // Success (next)
+      console.log(this.leagues)
+    },
+    error: (error: any) => {
+      console.error('Error fetching leagues:', error); // Error callback
+    },
+  });
+}
   
 }

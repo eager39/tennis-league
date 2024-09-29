@@ -10,6 +10,7 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 import { DashboardadminComponent } from './dashboardadmin/dashboardadmin.component';
 import { ManageUsersComponent } from './manage-users/manage-users.component';
 import { ManageleagueComponent } from './manageleague/manageleague.component';
+import { LeaguesignupComponent } from './leaguesignup/leaguesignup.component';
 export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'players/:id', component: PlayersComponent },
@@ -18,6 +19,7 @@ export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'logout', component: RegisterComponent },
+  { path: 'leaguesignup', component: LeaguesignupComponent },
   { path: 'dashboard', component: DashboardComponent ,canActivate:[RoleGuard],data: { roles: ['user'] }},
   { path: 'dashboardadmin', component: DashboardadminComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }},
   { path: 'manageusers', component: ManageUsersComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }},

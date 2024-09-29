@@ -12,8 +12,8 @@ export class LeaguesService {
   // private matchesUrl = 'http://localhost:3000/getmatches/'; // Adjust the URL as needed
   constructor(private http: HttpClient) {}
 
-  getLeagues(): Observable<any> {
-    return this.http.get(`${environment.apiUrl}/leagues`);
+  getLeagues(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiUrl}/leagues`);
   }
 
   getPlayersByLeague(leagueId: string): Observable<any> {
@@ -25,6 +25,20 @@ export class LeaguesService {
   endLeague(): Observable<any> {
    
     return this.http.post(environment.apiUrl+"/endLeague", {});
+  }
+  getTiedPlayers(): Observable<any> {
+    return this.http.get(`${environment.apiUrl+"/getTiedPlayers"}`);
+  }
+  promoteanddemote(): Observable<any> {
+    return this.http.get(`${environment.apiUrl+"/fetchpromotedanddemoted"}`);
+  }
+  promote(playerid: number,seasonid:number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/promote", { 'id': playerid,'status':'promoted','seasonid':seasonid });
+  }
+  demote(playerid: number,seasonid:number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/demote", { 'id': playerid,'status':'demoted','seasonid':seasonid });
   }
 
   

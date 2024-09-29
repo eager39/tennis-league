@@ -1,0 +1,47 @@
+<form  *ngIf="!this.auth.isAuthenticated()" [formGroup]="signUpForm" (ngSubmit)="onSubmit()">
+    <mat-card>
+      <mat-card-title>Sign Up for the League</mat-card-title>
+  
+    
+        <mat-label>Full Name</mat-label>
+        <input matInput placeholder="First and Last Name" formControlName="fullName" required />
+        <mat-error *ngIf="signUpForm.get('fullName')?.invalid">Full name is required</mat-error>
+     
+  
+    
+        <mat-label>Email</mat-label>
+        <input matInput placeholder="Email" formControlName="email" required type="email" />
+        <mat-error *ngIf="signUpForm.get('email')?.invalid">A valid email is required</mat-error>
+     
+  
+    
+        <mat-label>Phone Number</mat-label>
+        <input matInput placeholder="Phone Number" formControlName="phoneNumber" required type="tel" />
+        <mat-error *ngIf="signUpForm.get('phoneNumber')?.invalid">Phone number is required</mat-error>
+     
+  
+     
+        <mat-label>Gender</mat-label>
+        <mat-select formControlName="gender" required>
+          <mat-option value="m">Male</mat-option>
+          <mat-option value="ž">Female</mat-option>
+          <mat-option value="other">Other</mat-option>
+        </mat-select>
+        <mat-error *ngIf="signUpForm.get('gender')?.invalid">Gender selection is required</mat-error>
+     
+  
+      <mat-checkbox  formControlName="createAccount">I want to create an account</mat-checkbox>
+  
+      <div *ngIf="signUpForm.get('createAccount')?.value">
+       
+          <mat-label>Password</mat-label>
+          <input matInput placeholder="Password" formControlName="password" type="password" required />
+          <mat-error *ngIf="signUpForm.get('password')?.invalid">Password is required</mat-error>
+      
+      </div>
+  
+      <button mat-raised-button color="primary" type="submit" [disabled]="signUpForm.invalid">Submit</button>
+    </mat-card>
+  </form>
+  <button (click)="register(this.auth.getUserId())" *ngIf="this.auth.isAuthenticated()">Prijavi se v ligo</button>
+  

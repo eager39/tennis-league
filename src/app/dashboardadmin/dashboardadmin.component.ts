@@ -23,33 +23,41 @@ import { AuthService } from '../auth.service';
 export class DashboardadminComponent {
   matches: TennisMatch[] = [];
   dataSource = new MatTableDataSource<TennisMatch>();
+  dataSource2 = new MatTableDataSource<any[]>();
+  dataSource3 = new MatTableDataSource<any[]>();
   players: string[] = [];
   weeks: string[] = [];
   leagues: any[] = [];
   displayedColumns: string[] = ['week', 'home_player', 'away_player', 'result','deadline'];
-
+  displayedColumns2: string[] = ['league',  'points', 'actions'];
+  displayedColumns3: string[] = ['name',  'position', 'status','league'];
   selectedPlayer: string = '';
   selectedWeek: number | string = '';
   selectedLeagueId: number =1;
   matchesleft:number=0
   hideNoResults: boolean = false;
   @ViewChild('resultInput') resultInput!: ElementRef;
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild('paginator1') paginator1!: MatPaginator;
+  @ViewChild('paginator2') paginator2!: MatPaginator;
+  @ViewChild('paginator3') paginator3!: MatPaginator;
   resultForm: FormGroup;
   editingMatch: any = null;
   ngOnInit(): void {
-    this.fetchLeagues();
+   
+ 
     this.loadMatches();
-    this.route.params.subscribe(
-      (params: Params) => {
-        this.selectedLeagueId = +params["id"];
-        console.log(this.selectedLeagueId);
-        this.loadMatches()
-      })
+        this.getTiedPlayers()
+        
+      
+    this.fetchLeagues();
+    
+      
      
 }
 ngAfterViewInit() {
-  this.dataSource.paginator = this.paginator;
+  this.dataSource.paginator = this.paginator1;
+  this.dataSource2.paginator = this.paginator2;
+  this.dataSource3.paginator = this.paginator3;
 }
 
 fetchLeagues(): void {
@@ -69,10 +77,11 @@ loadMatches(): void {
       (data) => {
         this.matches = data;
         this.dataSource.data = data;
+        console.log(this.dataSource)
         this.extractPlayersAndWeeks(data);
         this.filterMatches();
         this.matchesleft=this.matches.length
-        console.log(this.matchesleft)
+      
       },
       (error) => {
         console.error('Error fetching matches:', error);
@@ -91,6 +100,7 @@ onLeagueChange(): void {
         console.log(data)
         this.matches = data;
         this.dataSource.data = data;
+        
         this.extractPlayersAndWeeks(data);
         this.filterMatches();
       },
@@ -106,6 +116,7 @@ onLeagueChange(): void {
     this.resultForm = this.fb.group({
       newResult: ['', [Validators.required, this.tennisScoreValidator]]
     });
+
    }
    checkNames(name:string){
     return this.AuthService.userMatchesPlayer(name)
@@ -222,4 +233,116 @@ onLeagueChange(): void {
       this.extractPlayersAndWeeks(this.matches.filter(match => playerFilter(match) && weekFilter(match) &&leagueFilter(match)))
       this.dataSource.data = this.matches.filter(match => playerFilter(match) && weekFilter(match) &&leagueFilter(match));
     }
+     showPromoted=0
+    endLeague(){
+     this.showPromoted=1
+      this.leagueService.promoteanddemote().subscribe((data) => {
+        console.log(data) 
+        this.dataSource3.data=data
+      })
+
+    }
+    promote(row: any){
+      this.leagueService.promote(row.player,row.season_id).subscribe((data)=>{
+        if(data){
+           this.dataSource3.data = (this.dataSource3.filteredData as any[]).filter(item => item.player != row.player);
+           alert("Igralec uspešno napredoval")
+        }
+      })
+     
+    }
+    demote(row: any){
+      this.leagueService.demote(row.player,row.season_id).subscribe((data)=>{
+        if(data){
+           this.dataSource3.data = (this.dataSource3.filteredData as any[]).filter(item => item.player != row.player);
+           alert("Igralec izpadel v nižjo ligo")
+        }
+      })
+  
+    }
+    getTiedPlayers(){
+      this.leagueService.getTiedPlayers().subscribe((data) => {
+       console.log(data) 
+        this.dataSource2.data=this.formatPlayerPairs(data)
+        console.log(this.formatPlayerPairs(data))
+        console.log(this.dataSource2.filteredData)
+        const maxPlayers = this.getMaxPlayerCount();
+        console.log(this.dataSource2.data)
+        for (let i = 1; i <= maxPlayers; i++) {
+          this.displayedColumns2.push('player' + i);
+        
+        }
+        console.log(this.displayedColumns2)
+      });
+    }
+    // Format the players into pairs for the table
+    formatPlayerPairs(players: any[]): any[] {
+      const groupedPlayers = [];
+      let currentGroup = [];
+      
+      for (let i = 0; i < players.length; i++) {
+        // Start a new group if points differ or league/season changes
+        if (
+          currentGroup.length === 0 ||
+          (players[i].league_id === players[i - 1]?.league_id &&
+           players[i].season_id === players[i - 1]?.season_id &&
+           players[i].points === players[i - 1]?.points)
+        ) {
+          currentGroup.push(players[i]);
+        } else {
+          // Process the current group and reset it
+          groupedPlayers.push(this.flattenPlayerGroup(currentGroup));
+          currentGroup = [players[i]];
+        }
+      }
+    
+      // Handle the last group if it's not empty
+      if (currentGroup.length > 0) {
+        groupedPlayers.push(this.flattenPlayerGroup(currentGroup));
+      }
+    
+      return groupedPlayers;
+    }
+    
+    // Helper function to flatten the group into individual player columns
+    flattenPlayerGroup(group: any[]): any {
+      const groupObject: any = {
+        league_name: group[0].league_name,
+        points: group[0].points
+      };
+    
+      // Add players dynamically as player1_name, player2_name, etc.
+      group.forEach((player, index) => {
+        groupObject[`player${index + 1}_name`] = player.player_name;
+        groupObject[`player${index + 1}_id`] = player.player_id;
+        groupObject[`player${index + 1}_position`] = player.position;
+      });
+    
+      return groupObject;
+    }
+    // This method dynamically returns indexes for the number of players in each row
+
+
+  // This method returns the maximum number of players in any row, to define how many columns to add
+  getMaxPlayerCount():any {
+ 
+    let data=this.dataSource2.data
+    let maxPlayers=0
+    
+    for(let i=0;i<data.length;i++){
+      if( Object.keys(data[i]).filter(key => key.startsWith("player") && key.endsWith("name")).length>maxPlayers){
+        maxPlayers= Object.keys(data[i]).filter(key => key.startsWith("player") && key.endsWith("name")).length
+      }
+     
+    }
+    
+    return maxPlayers;
+  }
+
+    
+
+  editPlayerStanding(row: any): void {
+    // Handle logic to edit player's standing
+    console.log('Edit standing for:', row);
+  }
 }
