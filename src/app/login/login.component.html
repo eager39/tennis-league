@@ -1,47 +1,44 @@
-<div class="login-container">
-    <h2>Login</h2>
-    <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          formControlName="email"
-          class="form-control"
-          placeholder="Enter your email"
-        />
-        <div *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
-          <small class="text-danger" *ngIf="loginForm.get('email')?.hasError('required')">
-            Email is required
-          </small>
-          <small class="text-danger" *ngIf="loginForm.get('email')?.hasError('email')">
-            Invalid email format
-          </small>
-        </div>
+<div class="wrapper">
+  <h2>Prijava</h2>
+  <form [formGroup]="loginForm" (ngSubmit)="onLogin()">
+    <div class="input-box">
+      <input
+        id="email"
+        type="email"
+        placeholder="Vnesi email"
+        formControlName="email"
+        required
+      />
+      <div *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+        <small class="text-danger" *ngIf="loginForm.get('email')?.hasError('required')">
+          Obvezno!
+        </small>
+        <small class="text-danger" *ngIf="loginForm.get('email')?.hasError('email')">
+          Napančni format emaila
+        </small>
       </div>
-  
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          class="form-control"
-          placeholder="Enter your password"
-        />
-        <div *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
-          <small class="text-danger" *ngIf="loginForm.get('password')?.hasError('required')">
-            Password is required
-          </small>
-          <small class="text-danger" *ngIf="loginForm.get('password')?.hasError('minlength')">
-            Password must be at least 6 characters
-          </small>
-        </div>
+    </div>
+
+    <div class="input-box">
+      <input
+        id="password"
+        type="password"
+        placeholder="Vnesi geslo"
+        formControlName="password"
+        required
+      />
+      <div *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+        <small class="text-danger" *ngIf="loginForm.get('password')?.hasError('required')">
+          Vnesi geslo!
+        </small>
+       
       </div>
-  
-      <button type="submit" class="btn btn-primary" [disabled]="loginForm.invalid">
-        Login
-      </button>
-    </form>
-    <p>Don't have an account? <a routerLink="/register">Register here</a></p>
-  </div>
+    </div>
+
+    <div class="input-box button">
+      <input type="submit" value="Prijava" [disabled]="loginForm.invalid">
+    </div>
+
+   
+  </form>
+</div>

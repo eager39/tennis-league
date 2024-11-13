@@ -33,19 +33,18 @@ app.use(function (req, res, next) {
   next();
 });
 // Create MySQL connection
-const connection = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "", // Replace with your MySQL root password
-  database: "tennis_league_local",
+const connection = mysql.createPool({
+  host: 'localhost',
+  user: 'eager39',
+  password: 'krizanic',
+  database: 'tennis_league_local',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 https.createServer(options, app).listen(8443, function (req, res) {
   console.log(res); //Change Port Number here (if required, 443 is the standard port for https)
   console.log("Server started at port 3000");
-});
-connection.connect((err) => {
-  if (err) throw err;
-  console.log("Connected to MySQL database.");
 });
 
 // Utility function to shuffle an array
@@ -535,12 +534,12 @@ app.get("/parsepdfmoski", async (req, res) => {
 
 app.get("/parsepdfzenske", async (req, res) => {
   const url =
-    "http://www.tenis-radgona.si/images/stories/liga_2024/rezultati_ženske_2023.pdf";
+    "http://www.tenis-radgona.si/images/stories/liga_2024/rezultati_Ĺľenske_2023.pdf";
   let dataBuffer = "";
 
   // Reading PDF file from local path
   dataBuffer = fs.readFileSync(
-    "../../../../../../Users/zan_s/Desktop/rezultati lige/rezultati_ženske_2024.pdf"
+    "../../../../../../Users/zan_s/Desktop/rezultati lige/rezultati_Ĺľenske_2024.pdf"
   );
 
   // Parse PDF data
@@ -1510,7 +1509,7 @@ app.post("/confirmResult", (req, res) => {
       return;
     }
 
-    res.json({ message: "Rezultat je bil uspešno potrjen" });
+    res.json({ message: "Rezultat je bil uspeĹˇno potrjen" });
   });
 });
 app.post("/forfeitMatch", (req, res) => {
@@ -1704,7 +1703,7 @@ app.post("/registerForLeagueNonUserPlayers", (req, res) => {
   // Function to register a player for a league with tier adjustment based on promotion/relegation
   const registerPlayerForLeague = (fullName, leagueId, seasonId, phone, email, password, callback) => {
     let league_id;
-    if (gender === "ž") {
+    if (gender === "Ĺľ") {
       league_id = 6; // Women's league ID
     } else {
       league_id = 5; // Men's league ID

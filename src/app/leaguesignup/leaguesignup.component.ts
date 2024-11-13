@@ -8,10 +8,11 @@ import {MatCheckboxModule} from '@angular/material/checkbox';
 import { MatOptionModule } from '@angular/material/core';
 import { DataService } from '../data.service';
 import { AuthService } from '../auth.service';
+import { MatButton, MatButtonModule } from '@angular/material/button';
 @Component({
   selector: 'app-leaguesignup',
   standalone: true,
-  imports: [MatFormFieldModule,MatSelectModule,CommonModule,MatCardModule,ReactiveFormsModule,MatFormFieldModule,MatCheckboxModule,MatOptionModule],
+  imports: [MatButtonModule,MatFormFieldModule,MatSelectModule,CommonModule,MatCardModule,ReactiveFormsModule,MatFormFieldModule,MatCheckboxModule,MatOptionModule],
   templateUrl: './leaguesignup.component.html',
   styleUrl: './leaguesignup.component.css'
 })
