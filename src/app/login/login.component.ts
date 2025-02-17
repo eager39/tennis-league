@@ -13,6 +13,7 @@ import { CommonModule } from '@angular/common';
 })
 export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
+error:any;
 
   constructor(
     private fb: FormBuilder,
@@ -36,7 +37,8 @@ export class LoginComponent implements OnInit {
           this.router.navigate(['/']); // Redirect to the home page or dashboard
         },
         (error) => {
-          console.error('Login error', error);
+          this.error=error.error
+          console.error( error.error);
         }
       );
     }

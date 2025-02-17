@@ -28,7 +28,7 @@ export class DashboardadminComponent {
   players: string[] = [];
   weeks: string[] = [];
   leagues: any[] = [];
-  displayedColumns: string[] = ['week', 'home_player', 'away_player', 'result','deadline'];
+  displayedColumns: string[] = ['week', 'home_player', 'away_player', 'result','deadline','penalty'];
   displayedColumns2: string[] = ['league',  'points', 'actions'];
   displayedColumns3: string[] = ['name',  'position', 'status','league'];
   selectedPlayer: string = '';
@@ -53,6 +53,9 @@ export class DashboardadminComponent {
     
       
      
+}
+penalty(id:any){
+console.log(id)
 }
 ngAfterViewInit() {
   this.dataSource.paginator = this.paginator1;

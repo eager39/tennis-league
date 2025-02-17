@@ -1557,9 +1557,9 @@ app.get("/unplayedMatches", (req, res) => {
   const query = `
      SELECT 
     s.id,
-    ps_home.player_id AS home_player,
+    ps_home.player_id AS home_player_id,
     hp.name AS home_player,
-    ps_away.player_id AS away_player,
+    ps_away.player_id AS away_player_id,
     ap.name AS away_player,
     s.result,
     ps_home.league_id,
@@ -1669,7 +1669,7 @@ app.post("/register", (req, res) => {
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
   const query = "SELECT * FROM users WHERE email=?";
-
+ 
   connection.query(query, [email], (err, results) => {
     if (err) {
       console.error("Error fetching players:", err);
@@ -1678,7 +1678,10 @@ app.post("/login", (req, res) => {
         .json({ error: "An error occurred while fetching players" });
       return;
     }
-
+    if(results==""){
+      res.status(401).send("Uporabnik ne obstaja")
+      return
+    }
     if (results[0].email && bcrypt.compareSync(password, results[0].password)) {
       const token = jwt.sign(
         {
