@@ -914,7 +914,8 @@ app.get("/calculate-standings/:id", (req, res) => {
         hps.player_id AS home_player_id,
         s.away_player,
         aps.player_id AS away_player_id,
-        s.result
+        s.result,
+        penalty
     FROM 
         schedule s
     JOIN 
@@ -990,7 +991,8 @@ WHERE
               netSetsWon: 0,
               matchesPlayed: 0,
               matchesWon: 0,
-              name:player.name
+              name:player.name,
+              penalties:0
             };
           });
 
@@ -998,15 +1000,15 @@ WHERE
             if (!match.result) {
               return; // Skip matches with no result
             }
-
+          
             const sets = match.result.split(",").map((set) => set.trim());
             if (sets.length < 2) {
               return; // Skip invalid match results
             }
-
+          
             let homeSetsWon = 0;
             let awaySetsWon = 0;
-
+          
             sets.forEach((set) => {
               const [homeGames, awayGames] = set.split("-").map(Number);
               if (homeGames > awayGames) {
@@ -1015,13 +1017,13 @@ WHERE
                 awaySetsWon += 1;
               }
             });
-
+          
             const homePlayerSeasonId = match.home_player;
             const awayPlayerSeasonId = match.away_player;
-
+          
             standings[homePlayerSeasonId].matchesPlayed += 1;
             standings[awayPlayerSeasonId].matchesPlayed += 1;
-
+          
             if (homeSetsWon > awaySetsWon) {
               standings[homePlayerSeasonId].points += 2;
               standings[homePlayerSeasonId].matchesWon += 1;
@@ -1029,7 +1031,7 @@ WHERE
               standings[awayPlayerSeasonId].points += 2;
               standings[awayPlayerSeasonId].matchesWon += 1;
             }
-
+          
             const homeGamesWon = sets.reduce(
               (acc, set) => acc + parseInt(set.split("-")[0]),
               0
@@ -1038,21 +1040,25 @@ WHERE
               (acc, set) => acc + parseInt(set.split("-")[1]),
               0
             );
-
-            standings[homePlayerSeasonId].netGamesWon +=
-              homeGamesWon - awayGamesWon;
-            standings[awayPlayerSeasonId].netGamesWon +=
-              awayGamesWon - homeGamesWon;
-
-            standings[homePlayerSeasonId].netSetsWon +=
-              homeSetsWon - awaySetsWon;
-            standings[awayPlayerSeasonId].netSetsWon +=
-              awaySetsWon - homeSetsWon;
-
-            standings[homePlayerSeasonId].setsPlayed +=
-              homeSetsWon + awaySetsWon;
-            standings[awayPlayerSeasonId].setsPlayed +=
-              homeSetsWon + awaySetsWon;
+          
+            standings[homePlayerSeasonId].netGamesWon += homeGamesWon - awayGamesWon;
+            standings[awayPlayerSeasonId].netGamesWon += awayGamesWon - homeGamesWon;
+          
+            standings[homePlayerSeasonId].netSetsWon += homeSetsWon - awaySetsWon;
+            standings[awayPlayerSeasonId].netSetsWon += awaySetsWon - homeSetsWon;
+          
+            standings[homePlayerSeasonId].setsPlayed += homeSetsWon + awaySetsWon;
+            standings[awayPlayerSeasonId].setsPlayed += homeSetsWon + awaySetsWon;
+          
+            // ✅ Deduct points if home player received a penalty
+            if (match.penalty ) {
+              
+              standings[homePlayerSeasonId].points -= 1;
+              standings[homePlayerSeasonId].penalties +=1;
+              console.log(
+                `Penalty applied: ${standings[homePlayerSeasonId].name} loses 1 point`
+              );
+            }
           });
 
           const reorderStandings = () => {
@@ -1274,15 +1280,16 @@ tiedPlayers.forEach((playerA, indexA) => {
           const orderedPlayerIds = reorderStandings();
 
           const updateOrInsertStandingsQuery = `
-                INSERT INTO standings (player, points, netGamesWon, setsPlayed, netSetsWon, matches_played, week, position)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO standings (player, points, netGamesWon, setsPlayed, netSetsWon, matches_played, week, position,num_of_penalty)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)
                 ON DUPLICATE KEY UPDATE
                     points = VALUES(points),
                     netGamesWon = VALUES(netGamesWon),
                     setsPlayed = VALUES(setsPlayed),
                     netSetsWon = VALUES(netSetsWon),
                     matches_played = VALUES(matches_played),
-                    position = VALUES(position)
+                    position = VALUES(position),
+                    num_of_penalty= VALUES(num_of_penalty)
             `;
 
           // Execute one insert/update per player
@@ -1300,6 +1307,7 @@ tiedPlayers.forEach((playerA, indexA) => {
                   // Use the correct season_id
                   "all", // Example week
                   index + 1, // Position (index + 1 for 1-based rank)
+                  standings[playerSeasonId].penalties
                 ],
                 (err) => {
                   if (err) {
@@ -1392,6 +1400,22 @@ app.post("/promote", (req, res) => {
   const query = "UPDATE players_season SET promotion_status = ? WHERE id = ? and season_id=?";
 
   connection.query(query, [status, id,seasonid], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+
+    res.status(200).json({ message: "Match result updated successfully" });
+  });
+});
+app.post("/applypenalty", (req, res) => {
+  const { id, matchid } = req.body;
+  const query = "UPDATE schedule SET penalty = ? WHERE id = ?";
+
+  connection.query(query, [ id,matchid], (err, results) => {
     if (err) {
       console.error("Error updating match result:", err);
       res
@@ -1564,7 +1588,9 @@ app.get("/unplayedMatches", (req, res) => {
     s.result,
     ps_home.league_id,
     s.week,
-    s.deadline
+    s.deadline,
+    s.home_player as home_player_s_id,
+    s.away_player as away_player_s_id
 FROM 
     schedule s
 JOIN 

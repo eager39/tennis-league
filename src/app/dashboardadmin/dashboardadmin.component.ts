@@ -54,8 +54,13 @@ export class DashboardadminComponent {
       
      
 }
-penalty(id:any){
-console.log(id)
+penalty(id:any,matchid:number){
+  this.leagueService.applypenalty(id,matchid).subscribe((data) => {
+    console.log(data) 
+if(data){
+  alert("Kazenska točka dodeljena")
+}
+  })
 }
 ngAfterViewInit() {
   this.dataSource.paginator = this.paginator1;

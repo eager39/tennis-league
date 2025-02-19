@@ -40,6 +40,10 @@ export class LeaguesService {
   
     return this.http.post(environment.apiUrl+"/demote", { 'id': playerid,'status':'demoted','seasonid':seasonid });
   }
+  applypenalty(playerid: number,matchid:number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/applypenalty", { 'id': playerid,'matchid':matchid });
+  }
 
   
 }
