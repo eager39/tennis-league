@@ -15,11 +15,12 @@
                 <span *ngIf="!authService.isAuthenticated()">Liga</span>
               </app-sidenav-link>
             </mat-expansion-panel-header>
-            <app-sidenav-link  routerLink="leaguesignup">Prijava v ligo<span></span></app-sidenav-link>
+            <app-sidenav-link  routerLink="leaguesignup" *ngIf="(authService.isAuthenticated()&& authService.hasRole('user'))">Prijava v ligo<span></span></app-sidenav-link>
             <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('user'))" routerLink="dashboard">Pregled<span></span></app-sidenav-link>
             <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin'))" routerLink="dashboardadmin">Pregled<span></span></app-sidenav-link>
             <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin'))" routerLink="manageusers">Upravljaj uporabnike in igralce<span></span></app-sidenav-link>
             <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin'))" routerLink="manageleague">Liga<span></span></app-sidenav-link>
+            <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin'))" routerLink="leaguedraw">Žreb<span></span></app-sidenav-link>
           </mat-expansion-panel>
           
           <mat-expansion-panel>

@@ -8,6 +8,16 @@
 <div>
   <h2>Igralci</h2>
   <ul>
-    <li *ngFor="let player of players">{{ player.name }}</li>
+    <li *ngFor="let player of players" (dblclick)="changeleague(player.id)">
+      {{ player.name }}
+      <mat-form-field *ngIf="showleague && player.id === selectedplayerid && authService.isAuthenticated() && authService.hasRole('admin')"> 
+        <mat-label>Liga</mat-label>
+        <mat-select [(value)]="newleagueid" (selectionChange)="updateLeague()">
+          <mat-option *ngFor="let league of leagues" [value]="league.id" [disabled]="league.id === player.league_id">
+            {{ league.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </li>
   </ul>
 </div>

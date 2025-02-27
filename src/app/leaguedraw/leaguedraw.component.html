@@ -1,0 +1,8 @@
+<mat-form-field appearance="fill">
+    <mat-label>Select Season</mat-label>
+    <mat-select (selectionChange)="onLeagueChange()"  [(value)]="selectedLeagueId">
+      <mat-option *ngFor="let league of leagues"  [value]="league.id">{{league.name}}</mat-option>
+    </mat-select>
+  </mat-form-field>
+ 
+  <li *ngFor="let player of players">{{player.name}}</li>

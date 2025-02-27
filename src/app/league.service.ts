@@ -44,6 +44,14 @@ export class LeaguesService {
   
     return this.http.post(environment.apiUrl+"/applypenalty", { 'id': playerid,'matchid':matchid });
   }
+  changeLeagueforPlayer(id: number,newleagueid:number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/changePlayerLeague", { 'id': id,"newleagueid":newleagueid});
+  }
+  draw(league: number,season:number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/generate-schedule", { 'liga': league,"season":season});
+  }
 
   
 }

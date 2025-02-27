@@ -134,76 +134,86 @@ ORDER BY
 });
 
 // Function to generate the round-robin schedule
-function generateRoundRobinSchedule(playerIds) {
-  const numPlayers = playerIds.length;
-  if (numPlayers % 2 !== 0) {
-    playerIds.push(null); // Add a dummy player if odd number of players
-  }
+function generateRoundRobinSchedule(playerArray) {
 
-  const schedule = [];
-  const totalRounds = numPlayers - 1;
-  const matchesPerRound = numPlayers / 2;
 
-  for (let round = 0; round < totalRounds; round++) {
-    const roundMatches = [];
-    for (let match = 0; match < matchesPerRound; match++) {
-      const home = (round + match) % (numPlayers - 1);
-      const away = (numPlayers - 1 - match + round) % (numPlayers - 1);
-      if (match == 0) {
-        roundMatches.push([playerIds[home], playerIds[numPlayers - 1]]);
-      } else {
-        roundMatches.push([playerIds[home], playerIds[away]]);
-      }
+
+
+let matches = [];
+
+
+
+for (let r = 1; r < 1 + playerArray.length - 1; r++) {
+    let round = [];
+    for (let i = 0; i < playerArray.length / 2; i++) {
+        round.push({
+            round: r,
+            match: i + 1,
+            player1: null,
+            player2: null
+        });
     }
-    schedule.push(roundMatches);
-  }
+    if (r === 1) {
+        round.forEach((m, i) => {
+            m.player1 = playerArray[i];
+            m.player2 = playerArray[playerArray.length - i - 1];
+        });
+    }
+    else {
+      
+        const prevRound = matches.filter(m => m.round === r - 1);
+       
+        const indexFind = idx => {
+            if (idx + (playerArray.length / 2) > playerArray.length - 2) {
+                return idx + 1 - (playerArray.length / 2);
+            }
+            else {
+                return idx + (playerArray.length / 2);
+            }
+        };
+        for (let i = 0; i < round.length; i++) {
+            const prev = prevRound[i];
+            const curr = round[i];
+            if (i === 0) {
+                if (prev.player2 === playerArray[playerArray.length - 1]) {
+                    curr.player1 = playerArray[playerArray.length - 1];
+                    curr.player2 = playerArray[indexFind(playerArray.findIndex(p => p === prev.player1))];
+                }
+                else {
+                    curr.player2 = playerArray[playerArray.length - 1];
+                    curr.player1 = playerArray[indexFind(playerArray.findIndex(p => p === prev.player2))];
+                }
+            }
+            else {
+                curr.player1 = playerArray[indexFind(playerArray.findIndex(p => p === prev.player1))];
+                curr.player2 = playerArray[indexFind(playerArray.findIndex(p => p === prev.player2))];
+            }
+        }
+       
+    }
+    matches = [...matches, ...round];
+}
+//console.log(matches)
+return matches;
 
-  return schedule;
 }
 
-// Function to ensure home and away alternation
-function assignHomeAway(schedule) {
-  const homeAwayMap = new Map();
-  const updatedSchedule = [];
+// If double round-robin, duplicate the schedule with reversed matches
 
-  schedule.forEach((round, roundIndex) => {
-    const roundMatches = [];
-    round.forEach((match) => {
-      const [home, away] = match;
 
-      if (home == null || away == null) {
-        // Skip matches with dummy players
-        return;
-      }
 
-      if (!homeAwayMap.has(home)) homeAwayMap.set(home, "home");
-      if (!homeAwayMap.has(away)) homeAwayMap.set(away, "away");
 
-      const homeLastWeek = homeAwayMap.get(home);
-      const awayLastWeek = homeAwayMap.get(away);
 
-      if (homeLastWeek == "home") {
-        roundMatches.push([away, home]);
-        homeAwayMap.set(home, "away");
-        homeAwayMap.set(away, "home");
-      } else {
-        roundMatches.push([home, away]);
-        homeAwayMap.set(home, "home");
-        homeAwayMap.set(away, "away");
-      }
-    });
-    updatedSchedule.push(roundMatches);
-  });
 
-  return updatedSchedule;
-}
+
+
 // Function to generate a random tennis score
 
 const leagueStartDate = new Date("2024-05-19");
 
 // Helper function to calculate the deadline
 function calculateDeadline(week) {
-  const leagueStartDate = new Date("2024-05-19"); // Adjust the start date if necessary
+  const leagueStartDate = new Date("2025-05-18"); // Adjust the start date if necessary
   const deadlineDate = new Date(leagueStartDate);
   deadlineDate.setDate(deadlineDate.getDate() + week * 7); // Add 7 days per week
 
@@ -847,11 +857,12 @@ ORDER BY
   });
 });
 // Route to generate and store the round-robin schedule
-app.get("/generate-schedule", (req, res) => {
+app.post("/generate-schedule", (req, res) => {
+  const { liga, season } = req.body;
+  console.log(req.body)
   // Fetch player IDs
   connection.query(
-    "SELECT id, name FROM players WHERE league_id=6",
-    (err, data) => {
+    "SELECT * FROM players_season WHERE league_id=? and season_id=?",[liga,season], (err, data) => {
       if (err) {
         console.error("Error fetching players:", err);
         res
@@ -867,36 +878,39 @@ app.get("/generate-schedule", (req, res) => {
       console.log(playerIds);
 
       const shuffledPlayerIds = shuffle(playerIds);
+      console.log(shuffledPlayerIds)
       const schedule = generateRoundRobinSchedule(shuffledPlayerIds);
-      const alternatedSchedule = assignHomeAway(schedule);
-      console.log(shuffledPlayerIds);
-
-      // Insert schedule into the database
+      const alternatedSchedule = schedule;
+      //console.log(schedule.length)
+      //Insert schedule into the database
       for (let week = 0; week < alternatedSchedule.length; week++) {
-        for (let match = 0; match < alternatedSchedule[week].length; match++) {
-          const homePlayerId = alternatedSchedule[week][match][0];
-          const awayPlayerId = alternatedSchedule[week][match][1];
-          const query =
-            "INSERT INTO schedule (week, home_player, away_player, league_id, season, deadline) VALUES (?, ?, ?, ?, ?, ?)";
-          connection.query(
+        const roundData = alternatedSchedule[week]; // Get the data for the current round
+        const round = roundData.round;
+        const match = roundData.match;
+        const homePlayerId = roundData.player1;  // Home player (player1)
+        const awayPlayerId = roundData.player2;  // Away player (player2)
+        console.log(homePlayerId)
+        // Now insert this match into your database
+        const query = "INSERT INTO schedule (week, home_player, away_player, deadline) VALUES (?, ?, ?, ?)";
+        
+        connection.query(
             query,
             [
-              week + 1,
-              homePlayerId,
-              awayPlayerId,
-              6,
-              "1",
-              calculateDeadline(week + 1),
+                round,  // The current round number (week)
+                homePlayerId,  // Home player ID
+                awayPlayerId,  // Away player ID
+                calculateDeadline(round),  // A function that calculates the deadline for this round
             ],
             (err, results) => {
-              if (err) {
-                console.error("Error inserting match:", err);
-              } else {
-                console.log("Inserted match:", results.insertId);
-              }
+                if (err) {
+                    console.error("Error inserting match:", err);
+                } else {
+                    console.log("Inserted match:", results.insertId);
+                }
             }
-          );
-        }
+        );
+    
+        
       }
 
       res.json({ message: "Schedule generated and stored in the database." });
@@ -1427,6 +1441,22 @@ app.post("/applypenalty", (req, res) => {
     res.status(200).json({ message: "Match result updated successfully" });
   });
 });
+app.post("/changePlayerLeague", (req, res) => {
+  const { id, newleagueid } = req.body;
+  const query = "UPDATE players_season SET league_id = ? WHERE id = ?";
+
+  connection.query(query, [newleagueid,id], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+    console.log(results)
+    res.status(200).json({ message: "Uspešno spremenjena liga igralca" });
+  });
+});
 app.post("/demote", (req, res) => {
   const { id, status,seasonid } = req.body;
   const query = "UPDATE players_season SET promotion_status = ? WHERE id = ? and season_id=?";
@@ -1728,11 +1758,11 @@ app.post("/login", (req, res) => {
 });
 app.post("/registerForLeagueNonUserPlayers", (req, res) => {
   const { fullName, phoneNumber, email, gender, password } = req.body.form;
-
+console.log(req.body)
   // Function to register a player for a league with tier adjustment based on promotion/relegation
   const registerPlayerForLeague = (fullName, leagueId, seasonId, phone, email, password, callback) => {
     let league_id;
-    if (gender === "Ĺľ") {
+    if (gender == "ž") {
       league_id = 6; // Women's league ID
     } else {
       league_id = 5; // Men's league ID
@@ -1786,10 +1816,10 @@ app.post("/registerForLeagueNonUserPlayers", (req, res) => {
             let currentTier = promotionResults[0].tier;
 
             // Adjust the tier based on promotion status
-            if (promotionStatus === 'promoted') {
+            if (promotionStatus == 'promoted') {
               console.log('Player promoted, adjusting to tier:', currentTier - 1);
               currentTier -= 1; // Promotion means moving to a higher tier
-            } else if (promotionStatus === 'relegated') {
+            } else if (promotionStatus == 'demoted') {
               console.log('Player relegated, adjusting to tier:', currentTier + 1);
               currentTier += 1; // Relegation means moving to a lower tier
             }
@@ -1929,7 +1959,7 @@ app.post("/registerForLeagueNonUserPlayers", (req, res) => {
   registerPlayerForLeague(fullName, leagueId, seasonId, phoneNumber, email, password, (err, result) => {
     if (err) {
       console.error('Error registering player:', err);
-      res.status(500).json({ error: err });
+      //res.status(400).json({ error: err });
     } else {
       console.log('Player registration successful:', result);
       res.status(200).json({ message: 'Player registered successfully!' });
