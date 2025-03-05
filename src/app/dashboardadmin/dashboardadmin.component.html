@@ -126,7 +126,7 @@
 
 <mat-paginator #paginator2 [pageSize]="8" showFirstLastButtons></mat-paginator>
 
-<table *ngIf="showPromoted==1" mat-table [dataSource]="dataSource3" class="mat-elevation-z8">
+<table *ngIf="showPromoted==1 && dataSource3.filteredData.length>0" mat-table [dataSource]="dataSource3" class="mat-elevation-z8">
 
   <!-- League Column -->
   <ng-container matColumnDef="name">
@@ -160,6 +160,9 @@
   <tr mat-row *matRowDef="let row; columns: displayedColumns3;"></tr>
 
 </table>
-
+<div *ngIf="loaded">
+  <button (click)="lockstandings()" *ngIf="dataSource.filteredData.length==0 && season_status[0].standings_status=='open'  " mat-raised-button>Zakleni Razvrstitve</button>
+</div>
 <mat-paginator #paginator3 [pageSize]="8" showFirstLastButtons></mat-paginator>
-<button (click)="endLeague()" *ngIf="dataSource.filteredData.length==0" mat-raised-button>Zaključi ligo</button>
+
+

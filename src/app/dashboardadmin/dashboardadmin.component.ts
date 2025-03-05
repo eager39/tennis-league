@@ -13,6 +13,7 @@ import { MatInput, MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Params } from '@angular/router';
 import { map } from 'rxjs/internal/operators/map';
 import { AuthService } from '../auth.service';
+import { SeasonService } from '../season.service';
 @Component({
   selector: 'app-dashboardadmin',
   standalone: true,
@@ -41,24 +42,36 @@ export class DashboardadminComponent {
   @ViewChild('paginator2') paginator2!: MatPaginator;
   @ViewChild('paginator3') paginator3!: MatPaginator;
   resultForm: FormGroup;
-  editingMatch: any = null;
+  editingMatch: any = null; 
+ season: number =1
+ season_status:any
+ loaded=false
   ngOnInit(): void {
-   
+ this.season=this.seasonservice.getCurrentSeason()
  
     this.loadMatches();
-        this.getTiedPlayers()
-        
-      
     this.fetchLeagues();
-    
-      
+    this.getTiedPlayers()
+    this.getstandingsstatus()    
+    this.endLeague()
+  
+   
      
 }
 penalty(id:any,matchid:number){
   this.leagueService.applypenalty(id,matchid).subscribe((data) => {
-    console.log(data) 
+   
 if(data){
   alert("Kazenska točka dodeljena")
+}
+  })
+}
+getstandingsstatus(){
+  this.leagueService.checkstatus(this.season).subscribe((data) => {
+    
+if(data){
+this.season_status=data
+this.loaded=true
 }
   })
 }
@@ -66,6 +79,23 @@ ngAfterViewInit() {
   this.dataSource.paginator = this.paginator1;
   this.dataSource2.paginator = this.paginator2;
   this.dataSource3.paginator = this.paginator3;
+  if(this.loaded){
+      if(this.season_status[0].standings_status=='locked'){
+   
+    if(this.dataSource3.data.length>0){
+     
+      this.showPromoted=1
+    }else{
+      this.showPromoted=0
+       
+    }
+  }else{
+    this.showPromoted=0
+  
+  }
+  }
+
+  
 }
 
 fetchLeagues(): void {
@@ -85,7 +115,7 @@ loadMatches(): void {
       (data) => {
         this.matches = data;
         this.dataSource.data = data;
-        console.log(this.dataSource)
+       
         this.extractPlayersAndWeeks(data);
         this.filterMatches();
         this.matchesleft=this.matches.length
@@ -105,7 +135,7 @@ onLeagueChange(): void {
   if (this.selectedLeagueId) {
     this.leagueService.getMatchesByLeague(this.selectedLeagueId).subscribe(
       (data) => {
-        console.log(data)
+       
         this.matches = data;
         this.dataSource.data = data;
         
@@ -120,7 +150,7 @@ onLeagueChange(): void {
     this.loadMatches();
   }
 }
-  constructor(private matchService: MatchService, private leagueService: LeaguesService,private route: ActivatedRoute,private fb: FormBuilder,private AuthService: AuthService) {
+  constructor(private matchService: MatchService, private leagueService: LeaguesService,private route: ActivatedRoute,private fb: FormBuilder,private AuthService: AuthService,private seasonservice: SeasonService) {
     this.resultForm = this.fb.group({
       newResult: ['', [Validators.required, this.tennisScoreValidator]]
     });
@@ -153,7 +183,7 @@ onLeagueChange(): void {
     calculateStandings(): void {
       this.matchService.calculateStandings(this.selectedLeagueId).subscribe(
         (response) => {
-          console.log('Standings calculated:', response);
+         // console.log('Standings calculated:', response);
         },
         (error) => {
           console.error('Error calculating standings:', error);
@@ -163,7 +193,7 @@ onLeagueChange(): void {
     tennisScoreValidator(control: any): { [key: string]: boolean } | null {
       const value = control.value;
       if(value=="No result"){
-        console.log("asd")
+        
       return {  invalidTennisScore: false }
       }
       const regex = /^(\d+-\d+,)*\d+-\d+$/; // Regular expression for tennis scores
@@ -194,12 +224,12 @@ onLeagueChange(): void {
         }
   
         if (homeWins > 2 && awayWins == 1) {
-          console.log(homeWins,awayWins+"1")
+         
           if (sets.length > 2) {
             return { extraSet: true };
           }
         }else if(homeWins == 1 && awayWins > 2) {
-          console.log(homeWins,awayWins+"2")
+          
           if (sets.length > 2) {
             return { extraSet: true };
           }
@@ -244,9 +274,10 @@ onLeagueChange(): void {
      showPromoted=0
     endLeague(){
      this.showPromoted=1
-      this.leagueService.promoteanddemote().subscribe((data) => {
-        console.log(data) 
+      this.leagueService.promoteanddemote(this.season).subscribe((data) => {
+      
         this.dataSource3.data=data
+        console.log(this.dataSource3)
       })
 
     }
@@ -254,6 +285,9 @@ onLeagueChange(): void {
       this.leagueService.promote(row.player,row.season_id).subscribe((data)=>{
         if(data){
            this.dataSource3.data = (this.dataSource3.filteredData as any[]).filter(item => item.player != row.player);
+            if(this.dataSource3.data.length==0){
+              alert("promiotion done")
+            }
            alert("Igralec uspešno napredoval")
         }
       })
@@ -270,18 +304,26 @@ onLeagueChange(): void {
     }
     getTiedPlayers(){
       this.leagueService.getTiedPlayers().subscribe((data) => {
-       console.log(data) 
+      
         this.dataSource2.data=this.formatPlayerPairs(data)
-        console.log(this.formatPlayerPairs(data))
-        console.log(this.dataSource2.filteredData)
+    
         const maxPlayers = this.getMaxPlayerCount();
-        console.log(this.dataSource2.data)
+     
         for (let i = 1; i <= maxPlayers; i++) {
           this.displayedColumns2.push('player' + i);
         
         }
-        console.log(this.displayedColumns2)
+        
       });
+    }
+    lockstandings(){
+      this.leagueService.lockstandings(this.season).subscribe((data)=>{
+        if(data){
+          this.getstandingsstatus()
+           alert("Razvrstitve so zakljenjene!")
+           this.endLeague()
+        }
+      })
     }
     // Format the players into pairs for the table
     formatPlayerPairs(players: any[]): any[] {
@@ -351,6 +393,6 @@ onLeagueChange(): void {
 
   editPlayerStanding(row: any): void {
     // Handle logic to edit player's standing
-    console.log('Edit standing for:', row);
+   
   }
 }

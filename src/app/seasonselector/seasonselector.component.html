@@ -1,5 +1,5 @@
 <mat-form-field appearance="fill">
-    <mat-label>Select Season</mat-label>
+    <mat-label>Izberi sezono</mat-label>
     <mat-select (selectionChange)="onSeasonChange($event.value)" [value]="currentSeason">
       <mat-option *ngFor="let season of seasons"  [value]="season.id">{{season.year}}</mat-option>
     </mat-select>

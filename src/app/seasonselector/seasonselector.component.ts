@@ -21,7 +21,7 @@ seasons :any[]=[]
   ngOnInit(): void {
     this.seasonService.getSeasons().subscribe(data=>{
       this.seasons=data
-      console.log(this.seasons)
+     
     })
     
 }

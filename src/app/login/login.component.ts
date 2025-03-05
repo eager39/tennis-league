@@ -32,7 +32,7 @@ error:any;
     if (this.loginForm.valid) {
       this.authService.login(this.loginForm.value).subscribe(
         (response) => {
-          console.log('Login successful', response);
+        
           this.authService.setToken(response.token)
           this.router.navigate(['/']); // Redirect to the home page or dashboard
         },

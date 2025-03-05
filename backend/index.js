@@ -23,6 +23,7 @@ const path = require("path");
 const moment = require("moment"); // Use moment.js for date manipulation
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { match } = require("assert");
 app.use(cors());
 app.use(bodyParser.json());
 var getIP = require("ipware")().get_ip;
@@ -194,6 +195,7 @@ for (let r = 1; r < 1 + playerArray.length - 1; r++) {
     matches = [...matches, ...round];
 }
 //console.log(matches)
+console.log(matches)
 return matches;
 
 }
@@ -881,7 +883,7 @@ app.post("/generate-schedule", (req, res) => {
       console.log(shuffledPlayerIds)
       const schedule = generateRoundRobinSchedule(shuffledPlayerIds);
       const alternatedSchedule = schedule;
-      //console.log(schedule.length)
+      console.log(schedule.length)
       //Insert schedule into the database
       for (let week = 0; week < alternatedSchedule.length; week++) {
         const roundData = alternatedSchedule[week]; // Get the data for the current round
@@ -911,7 +913,7 @@ app.post("/generate-schedule", (req, res) => {
         );
     
         
-      }
+       }
 
       res.json({ message: "Schedule generated and stored in the database." });
     }
@@ -1473,7 +1475,8 @@ app.post("/demote", (req, res) => {
     res.status(200).json({ message: "Match result updated successfully" });
   });
 });
-app.get("/fetchpromotedanddemoted", (req, res) => {
+app.post("/fetchpromotedanddemoted", (req, res) => {
+  season_id=req.body.seasonid
   const sql = `
     WITH TopPlayers AS (
         SELECT s.player, p.name, s.points, s.position, ps.league_id,l.name as liga,ps.season_id,ps.promotion_status,
@@ -1485,6 +1488,7 @@ app.get("/fetchpromotedanddemoted", (req, res) => {
         WHERE ps.league_id IN (2, 3, 4, 5) 
           AND ps.injured = 0
           AND s.position IN (1, 2, 3) 
+          and ps.season_id=?
     ),
     BottomPlayers AS (
         SELECT s.player, p.name, s.points, s.position, ps.league_id,l.name as liga,ps.season_id,ps.promotion_status,
@@ -1495,13 +1499,14 @@ app.get("/fetchpromotedanddemoted", (req, res) => {
          JOIN leagues l ON ps.league_id=l.id
         WHERE ps.league_id IN (1, 2, 3, 4) 
           AND ps.injured = 0 
+          and ps.season_id=?
     )
     SELECT * FROM TopPlayers WHERE rank <= 3 and promotion_status=''
     UNION ALL
     SELECT * FROM BottomPlayers WHERE rank <= 3 and promotion_status=''
   `;
 
-  connection.query(sql, (error, results) => {
+  connection.query(sql,[season_id,season_id], (error, results) => {
     if (error) {
       console.error('Error executing query:', error);
       return res.status(500).json({ error: 'Database query failed' });
@@ -1528,6 +1533,41 @@ app.post("/endLeague", (req, res) => {
     res.json({ message: "Match result updated successfully" });
   });
 });
+app.post("/lockstandings", (req, res) => {
+  season=req.body.seasonid
+  
+  const query = 'UPDATE season SET standings_status = "locked" WHERE id=?';
+
+  connection.query(query, [season], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+
+    res.json({ message: "Match result updated successfully" });
+  });
+});
+app.post("/checkstatus", (req, res) => {
+  season=req.body.seasonid
+  
+  const query = 'SELECT * FROM season WHERE id=?';
+
+  connection.query(query, [season], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+
+    res.json(results);
+  });
+});
+
 
 app.get("/leagues", (req, res) => {
   const seasonId = req.headers.season;
@@ -1701,22 +1741,27 @@ app.post("/linkplayer", (req, res) => {
 });
 app.post("/register", (req, res) => {
   users = [];
-  const { name, phone, email, password } = req.body;
+  const { name, phone, email, password,country,phonePrefix } = req.body;
   const hashedPassword = bcrypt.hashSync(password, 8);
   users.push({ email, password: hashedPassword });
   const query =
-    "INSERT INTO users (name,phone,email,password) VALUES (?,?,?,?)";
+    "INSERT INTO users (name,phone,email,password,drzava,phoneaffix) VALUES (?,?,?,?,?,?)";
 
   connection.query(
     query,
-    [name, phone, email, hashedPassword],
+    [name, phone, email, hashedPassword,country,phonePrefix],
     (err, results) => {
       if (err) {
         console.error("Error inserting user", err);
         res.status(500).json({ error: "error inserting user" });
         return;
       } else {
-        res.json(results);
+        console.log(results.affectedRows>0)
+        console.log(results)
+        if(results.affectedRows>0){
+          res.json(results);
+        }
+        
       }
     }
   );

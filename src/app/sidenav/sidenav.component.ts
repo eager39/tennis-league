@@ -39,7 +39,7 @@ fetchLeagues(): void {
   this.leagueService.getLeagues().subscribe({
     next: (data: leagues[]) => {
       this.leagues = data; // Success (next)
-      console.log(this.leagues)
+    
     },
     error: (error: any) => {
       console.error('Error fetching leagues:', error); // Error callback

@@ -15,18 +15,32 @@
       </div>
     </div>
 
-    <div class="input-box">
+    <div class="input-box" style="display: flex; align-items: center; gap: 10px;">
+     
       <input 
         type="text" 
         placeholder="Telefonska" 
         formControlName="phone" 
         required 
-      />
-      <div *ngIf="registerForm.get('phone')?.invalid && registerForm.get('phone')?.touched">
-        <small class="text-danger" *ngIf="registerForm.get('phone')?.hasError('required')">
-          Obvezno!
-        </small>
-      </div>
+      /> 
+     
+   
+      <mat-form-field>
+        <mat-label>Izberi predpono</mat-label>
+        <mat-select  formControlName="phonePrefix">
+        
+          <mat-option value="+386" selected>+386</mat-option>
+          <mat-option value="+385">+385</mat-option>
+          <mat-option value="+49">+49</mat-option>
+          <mat-option value="+43">+43</mat-option>
+          <mat-option value="+39">+39</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <div *ngIf="registerForm.get('phonePrefix')?.invalid && registerForm.get('phonePrefix')?.touched">
+      <small class="text-danger" *ngIf="registerForm.get('phonePrefix')?.hasError('required')">
+        Obvezno!
+      </small>
     </div>
 
     <div class="input-box">
@@ -47,6 +61,24 @@
     </div>
 
     <div class="input-box">
+     
+      <mat-form-field>
+         <mat-label>Država</mat-label>
+        <mat-select  formControlName="country">
+        
+          <mat-option value="slovenija" selected>Slovenija</mat-option>
+          <mat-option value="hrvaska">Hrvaška</mat-option>
+          <mat-option value="nemcija">Nemčija</mat-option>
+          <mat-option value="avstrija">Avstrija</mat-option>
+          <mat-option value="italija">Italija</mat-option>
+          <mat-option value="madzarska">Madžarska</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+
+
+    <div class="input-box">
       <input 
         type="password" 
         placeholder="Vpiši novo geslo" 
@@ -58,7 +90,7 @@
           Obvezno!
         </small>
         <small class="text-danger" *ngIf="registerForm.get('password')?.hasError('minlength')">
-         Geslo naj vsebuje vsaj 6 znakov
+          Geslo naj vsebuje vsaj 6 znakov
         </small>
       </div>
     </div>
@@ -80,15 +112,8 @@
       </div>
     </div>
 
-    <!-- <div class="policy">
-      <input type="checkbox" required>
-      <h3>I accept all terms & conditions</h3>
-    </div> -->
-
     <div class="input-box button">
       <input type="submit" value="Registriraj se" [disabled]="registerForm.invalid">
     </div>
-
- 
   </form>
 </div>

@@ -50,7 +50,7 @@ export class MatchesComponent implements OnInit, AfterViewInit {
     this.route.params.subscribe(
       (params: Params) => {
         this.selectedLeagueId = +params["id"];
-        console.log(this.selectedLeagueId);
+       
         this.loadMatches()
       })
 }
@@ -93,7 +93,7 @@ return this.AuthService.userMatchesPlayer(name)
     if (this.selectedLeagueId) {
       this.leagueService.getMatchesByLeague(this.selectedLeagueId).subscribe(
         (data) => {
-          console.log(data)
+         
           this.matches = data;
           this.dataSource.data = data;
           this.extractPlayersAndWeeks(data);
@@ -150,7 +150,7 @@ return this.AuthService.userMatchesPlayer(name)
   calculateStandings(): void {
     this.matchService.calculateStandings(this.selectedLeagueId).subscribe(
       (response) => {
-        console.log('Standings calculated:', response);
+        
       },
       (error) => {
         console.error('Error calculating standings:', error);
@@ -187,12 +187,12 @@ return this.AuthService.userMatchesPlayer(name)
       }
 
       if (homeWins > 2 && awayWins == 1) {
-        console.log(homeWins,awayWins+"1")
+     
         if (sets.length > 2) {
           return { extraSet: true };
         }
       }else if(homeWins == 1 && awayWins > 2) {
-        console.log(homeWins,awayWins+"2")
+       
         if (sets.length > 2) {
           return { extraSet: true };
         }

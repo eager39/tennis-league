@@ -45,7 +45,7 @@ export class StandingsComponent implements OnInit {
     this.route.params.subscribe(
       (params: Params) => {
         this.selectedLeague = params["id"];
-        console.log(this.selectedLeague);
+  
         this.loadStandings()
       })
   }
@@ -53,23 +53,23 @@ export class StandingsComponent implements OnInit {
   loadLeagues(): void {
     this.matchService.getLeagues().subscribe(data => {
       this.leagues = data;
-      console.log('Leagues:', this.leagues); // Add console log
+     
     }, error => {
-      console.error('Error fetching leagues:', error);
+     
     });
   }
 
   loadStandings(): void {
     this.matchService.getMatches(parseInt(this.selectedLeague)).subscribe(data => {
        data.map((element) => {
-        console.log('Raw tie_breaker_stats:', element.tie_breaker_stats); // Log the raw value
+      
 
         try {
           // Check if tie_breaker_stats is a JSON string and parse it
           if (typeof element.tie_breaker_stats == 'string') {
             // Ensure it's not empty or invalid before parsing
             if (element.tie_breaker_stats.trim() == '') {
-              console.warn('Empty tie_breaker_stats for player:', element.name);
+           //   console.warn('Empty tie_breaker_stats for player:', element.name);
               element.tieBreakerStats = {}; // Fallback to an empty object
             } else {
               element.tieBreakerStats = JSON.parse(element.tie_breaker_stats);
@@ -86,16 +86,16 @@ export class StandingsComponent implements OnInit {
       this.standings = data;
    
      this.filterStandings(); // Apply initial filter based on selected league
-      console.log('Standings:', this.standings); // Add console log
+    //  console.log('Standings:', this.standings); // Add console log
     }, error => {
-      console.error('Error fetching standings:', error);
+    //  console.error('Error fetching standings:', error);
     });
   }
 
   onLeagueChange(event: Event): void {
     const selectElement = event.target as HTMLSelectElement;
     this.selectedLeague = selectElement.value;
-    console.log('Selected League:', this.selectedLeague); // Add console log
+  //  console.log('Selected League:', this.selectedLeague); // Add console log
     //this.loadStandings()
    // this.filterStandings();
   }

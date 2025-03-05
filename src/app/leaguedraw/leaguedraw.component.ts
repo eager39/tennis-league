@@ -33,18 +33,18 @@ currentSeason: any;
    loadLeagues(): void {
     this.matchService.getLeagues().subscribe(data => {
       this.leagues = data;
-      console.log('Leagues:', this.leagues); // Add console log
+  
     }, error => {
       console.error('Error fetching leagues:', error);
     });
   }
   onLeagueChange() {
-    console.log(this.selectedLeagueId)
+  
     // this.selectedLeagueId = event.target.value;
      if (this.selectedLeagueId) {
        this.leagueService.getPlayersByLeague(this.selectedLeagueId).subscribe(data => {
          this.players = data;
-         console.log(this.players)
+       
 this.test()
        });
      } else {
@@ -52,10 +52,10 @@ this.test()
      }
    }
    test(){
-    console.log()
+   
     this.leagueService.draw(this.selectedLeagueId,this.seasonservice.getCurrentSeason()).subscribe(
       (response) => {
-        console.log('Registration successful', response);
+      
        
       },
       (error) => {

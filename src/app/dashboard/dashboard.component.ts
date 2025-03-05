@@ -87,7 +87,7 @@ this.pendingResultsMatches = this.matches.filter(match => {
     );
   }
   isAwayPlayer(match: any): boolean {
-    console.log(this.AuthService.getUserId() , match.away_player_id)
+   
     // Compare the current user's username with the away_player field
     return this.AuthService.getUserId() == match.away_player_id;
   }
@@ -114,7 +114,7 @@ this.pendingResultsMatches = this.matches.filter(match => {
     this.matchService.forfeitMatch(match.id,result).subscribe(
       response => {
         // Handle success, e.g., refresh the data
-        console.log('Match forfeited successfully', response);
+       
         // Optionally reload the data
        this.loadMatches()
       },
@@ -175,10 +175,10 @@ return this.AuthService.userMatchesPlayer(name)
   calculateStandings(): void {
     this.matchService.calculateStandings(this.league_id).subscribe(
       (response: any) => {
-        console.log('Standings calculated:', response);
+       
       },
       (error: any) => {
-        console.error('Error calculating standings:', error);
+      
       }
     );
   }
@@ -212,12 +212,12 @@ return this.AuthService.userMatchesPlayer(name)
       }
 
       if (homeWins > 2 && awayWins == 1) {
-        console.log(homeWins,awayWins+"1")
+       
         if (sets.length > 2) {
           return { extraSet: true };
         }
       }else if(homeWins == 1 && awayWins > 2) {
-        console.log(homeWins,awayWins+"2")
+       
         if (sets.length > 2) {
           return { extraSet: true };
         }

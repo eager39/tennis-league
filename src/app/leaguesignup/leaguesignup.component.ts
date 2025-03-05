@@ -54,13 +54,13 @@ export class LeaguesignupComponent {
           console.error('Error fetching leagues:', error); // Error callback
         },
       })
-      console.log('Form Submitted', this.signUpForm.value);
+     
     } else {
       console.error('Form is invalid');
     }
   }
   register(id:any){
-    console.log(id)
+    
     this.dataService.registerForLeagueRegisteredPlayers(id).subscribe({
       next: (data: any) => {
        if(data){

@@ -29,8 +29,8 @@ export class LeaguesService {
   getTiedPlayers(): Observable<any> {
     return this.http.get(`${environment.apiUrl+"/getTiedPlayers"}`);
   }
-  promoteanddemote(): Observable<any> {
-    return this.http.get(`${environment.apiUrl+"/fetchpromotedanddemoted"}`);
+  promoteanddemote(season:number): Observable<any> {
+    return this.http.post(environment.apiUrl+"/fetchpromotedanddemoted",{"seasonid":season});
   }
   promote(playerid: number,seasonid:number): Observable<any> {
   
@@ -51,6 +51,14 @@ export class LeaguesService {
   draw(league: number,season:number): Observable<any> {
   
     return this.http.post(environment.apiUrl+"/generate-schedule", { 'liga': league,"season":season});
+  }
+  lockstandings(seasonid:number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/lockstandings", { 'seasonid': seasonid });
+  }
+  checkstatus(seasonid:number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/checkstatus", { 'seasonid': seasonid });
   }
 
   

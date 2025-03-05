@@ -43,7 +43,7 @@ export class ManageUsersComponent {
      this.dataService.getUsers().subscribe(users => {
        this.users = users;
        this.dataSourceUsers.data = this.users;
-       console.log(this.users)
+      
      });
   }
 
@@ -51,12 +51,12 @@ export class ManageUsersComponent {
     
      this.dataService.getPlayers().subscribe(players => {
        this.players = players;
-      console.log(this.players)
+    
      });
   }
 
   onPlayerLink(user: any): void {
-  console.log(user)
+ 
      this.dataService.linkPlayer(user.id, user.playerId).subscribe();
   }
 

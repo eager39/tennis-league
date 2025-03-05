@@ -32,7 +32,7 @@ export class PlayersComponent implements OnInit {
     this.route.params.subscribe(
       (params: Params) => {
         this.selectedLeagueId = params["id"];
-        console.log(this.selectedLeagueId);
+     
        this.onLeagueChange()
       })
   }
@@ -50,11 +50,11 @@ export class PlayersComponent implements OnInit {
   changeleague(id:number){
     this.selectedplayerid=id
    this.showleague=true
-console.log(this.showleague,id)
+
 
   }
   updateLeague(){
-  console.log(this.selectedplayerid,"+",this.newleagueid)
+  
   
   
      this.leaguesService.changeLeagueforPlayer(this.selectedplayerid,this.newleagueid).subscribe((data) => {
