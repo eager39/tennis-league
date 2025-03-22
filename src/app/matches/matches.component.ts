@@ -81,6 +81,7 @@ return this.AuthService.userMatchesPlayer(name)
           this.dataSource.data = data;
           this.extractPlayersAndWeeks(data);
           this.filterMatches();
+      
         },
         (error) => {
           console.error('Error fetching matches:', error);

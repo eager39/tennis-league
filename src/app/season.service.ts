@@ -21,4 +21,11 @@ export class SeasonService {
   getSeasons(): Observable<any[]>{
     return this.http.get<TennisMatch[]>(environment.apiUrl+"/getSeasons/");
   }
+  createSeason(data:any){
+    return this.http.post(environment.apiUrl+"/createSeason", {data });
+  }
+  updateSeason(data:any){
+    return this.http.post(environment.apiUrl+"/updateSeason", {data });
+  }
+
 }

@@ -1,1 +1,119 @@
-<button (click)="endLeague()"  mat-raised-button>Zaključi ligo</button>
+<button (click)="newseasonfn('new')">Vnesi novo sezono</button>
+<button (click)="newseasonfn('edit')">Urejaj trenutno sezono</button>
+<div class="wrapper" *ngIf="auth.isAuthenticated() && newseason">
+    <h2>Upravljanje sezone</h2>
+    <form [formGroup]="season" (ngSubmit)="onSubmit()">
+      <div class="input-box">
+        <mat-form-field appearance="outline">
+          <mat-label>Liga leto</mat-label>
+          <input matInput formControlName="year" required />
+          <mat-error *ngIf="season.get('year')?.invalid">Obvezno!</mat-error>
+        </mat-form-field>
+      </div>
+  
+      <div class="input-box">
+        <mat-form-field appearance="outline">
+          <mat-label>Začetek lige</mat-label>
+          <input matInput formControlName="start_date" [matDatepicker]="picker" />
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+          <mat-error *ngIf="season.get('start_date')?.invalid">Obvezno!</mat-error>
+        </mat-form-field>
+      </div>
+  
+      <div class="input-box">
+        <mat-form-field appearance="outline">
+          <mat-label>Konec lige</mat-label>
+          <input matInput formControlName="end_date" [matDatepicker]="picker2" />
+          <mat-hint>MM/DD/YYYY</mat-hint>
+          <mat-datepicker-toggle matIconSuffix [for]="picker2"></mat-datepicker-toggle>
+          <mat-datepicker #picker2></mat-datepicker>
+          <mat-error *ngIf="season.get('end_date')?.invalid">Obvezno!</mat-error>
+        </mat-form-field>
+      </div>
+  
+      <div class="input-box button">
+        <button mat-raised-button color="primary" [disabled]="season.invalid" type="submit">
+          Ustvari novo sezono lige
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="wrapper" *ngIf="auth.isAuthenticated() && editseason">
+    <h2>Spremeni  trenutno sezono</h2>
+    <form [formGroup]="season" (ngSubmit)="onSubmit()">
+        <div class="input-box">
+            <mat-form-field appearance="outline">
+              <mat-label>Liga leto</mat-label>
+              <input matInput formControlName="year"  >
+              <mat-error *ngIf="season.get('year')?.invalid">Obvezno!</mat-error>
+            </mat-form-field>
+          </div>
+      <div class="input-box">
+        <mat-form-field>
+            <mat-label>Stanje lige</mat-label>
+           <mat-select  formControlName="status">
+           
+             <mat-option value="open" selected>Odprto</mat-option>
+             <mat-option value="closed">Zaprto</mat-option>
+    
+           </mat-select>
+         </mat-form-field>
+       </div>
+       <div class="input-box">
+        <mat-form-field>
+            <mat-label>Stanje Razvrstitev</mat-label>
+           <mat-select  formControlName="standings_status">
+           
+             <mat-option value="open" selected>Odprto</mat-option>
+             <mat-option value="locked">Zakljenjeno</mat-option>
+    
+           </mat-select>
+         </mat-form-field>
+       </div>
+       <div class="input-box">
+        <mat-form-field>
+            <mat-label>Napredovanje/izpad</mat-label>
+           <mat-select  formControlName="promotion">
+           
+             <mat-option value="open" selected>Odprto</mat-option>
+             <mat-option value="locked">Zakljenjeno</mat-option>
+    
+           </mat-select>
+         </mat-form-field>
+       </div>
+   
+  
+      <div class="input-box">
+        <mat-form-field appearance="outline">
+          <mat-label>Začetek lige</mat-label>
+          <input matInput formControlName="start_date" [matDatepicker]="picker" />
+        
+          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+          <mat-error *ngIf="season.get('start_date')?.invalid">Obvezno!</mat-error>
+        </mat-form-field>
+      </div>
+  
+      <div class="input-box">
+        <mat-form-field appearance="outline">
+          <mat-label>Konec lige</mat-label>
+          <input matInput formControlName="end_date" [matDatepicker]="picker2" />
+          
+          <mat-datepicker-toggle matIconSuffix [for]="picker2"></mat-datepicker-toggle>
+          <mat-datepicker #picker2></mat-datepicker>
+          <mat-error *ngIf="season.get('end_date')?.invalid">Obvezno!</mat-error>
+        </mat-form-field>
+      </div>
+  
+      <div class="input-box button">
+        <button mat-raised-button color="primary"  [disabled]="season.invalid || season.untouched " type="submit">
+          Uredi sezono!
+        </button>
+        
+      </div>
+    </form>
+  </div>
+  

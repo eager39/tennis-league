@@ -52,6 +52,10 @@ export class LeaguesService {
   
     return this.http.post(environment.apiUrl+"/generate-schedule", { 'liga': league,"season":season});
   }
+  manualdraw(player_ids:any,season:number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/generate-schedule2", { 'player_Ids': player_ids,"season":season});
+  }
   lockstandings(seasonid:number): Observable<any> {
   
     return this.http.post(environment.apiUrl+"/lockstandings", { 'seasonid': seasonid });

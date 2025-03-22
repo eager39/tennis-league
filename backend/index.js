@@ -15,7 +15,7 @@ const app = express();
 app.enable("trust proxy");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-
+const verifyToken = require('../backend/authmiddleware');
 const pdfparse = require("pdf-parse");
 
 const axios = require("axios");
@@ -24,6 +24,7 @@ const moment = require("moment"); // Use moment.js for date manipulation
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { match } = require("assert");
+const { start } = require("repl");
 app.use(cors());
 app.use(bodyParser.json());
 var getIP = require("ipware")().get_ip;
@@ -80,7 +81,8 @@ app.get("/getSeasons", async (req, res) => {
   });
 });
 
-app.get("/getMyMatches", (req, res) => {
+
+app.get("/getMyMatches",verifyToken("user"), (req, res) => {
 
   const userid = req.query.id;
   const season = req.headers.season;
@@ -211,12 +213,33 @@ return matches;
 
 // Function to generate a random tennis score
 
-const leagueStartDate = new Date("2024-05-19");
+async function getDate(season){
+  return new Promise((resolve, reject) => {
+  const query = "SELECT start_date FROM season WHERE id=?";
+ 
+  connection.query(
+    query,[season],
+   
+    (err, results) => {
+      if (err) {
+        reject(err);
+      } else if (results.length > 0) {
+        
+        resolve(results[0].start_date); // Return players_season.id
+      } else {
+        resolve(null); // No matching record found
+      }
+    }
+  );
+});
+}
 
 // Helper function to calculate the deadline
-function calculateDeadline(week) {
-  const leagueStartDate = new Date("2025-05-18"); // Adjust the start date if necessary
-  const deadlineDate = new Date(leagueStartDate);
+function calculateDeadline(week,start_date) {
+  console.log(start_date)
+  // Adjust the start date if necessary
+  // console.log(leagueStartDate)
+  const deadlineDate = new Date(start_date*1000);
   deadlineDate.setDate(deadlineDate.getDate() + week * 7); // Add 7 days per week
 
   // Return the epoch time (timestamp in milliseconds)
@@ -226,7 +249,13 @@ function calculateDeadline(week) {
 app.get("/parsepdfmoski", async (req, res) => {
   const url = "http://www.tenis-radgona.si/images/stories/liga_2024/";
   let dataBuffer = "";
+  start_date=''
+  
 
+
+
+//   console.log(start_date)
+console.log("asd"+this.start_date)
   for (let i = 1; i < 16; i++) {
     try {
       const config = {
@@ -235,11 +264,11 @@ app.get("/parsepdfmoski", async (req, res) => {
         responseType: "arraybuffer",
       };
 
-      console.log(`Fetching ${i}.pdf...`);
+     // console.log(`Fetching ${i}.pdf...`);
       const response = await axios(config);
 
       dataBuffer = Buffer.from(response.data);
-      console.log(`${i}.pdf fetched successfully!`);
+    //  console.log(`${i}.pdf fetched successfully!`);
     } catch (error) {
       console.error(`Failed to fetch ${i}.pdf:`, error);
       continue; // Skip to the next iteration if fetching fails
@@ -248,14 +277,15 @@ app.get("/parsepdfmoski", async (req, res) => {
     // Process the PDF data
     pdfparse(dataBuffer)
       .then(async function (data) {
+        this.start_date=await getDate(1)
         const lines = data["text"]
           .split("\n")
           .filter((line) => line.trim() !== "");
-        console.log(lines);
+       // console.log(lines);
         const results = [];
         let currentLeague = "";
         let currentWeek = "";
-        console.log(lines);
+        //console.log(lines);
         lines.forEach((line) => {
           const leagueMatch = line.match(/^(\d+ liga|[^\d].* liga)/);
           const weekMatch = line.match(/^Rezultati\s*(\d+)\s*kolo/);
@@ -288,13 +318,14 @@ app.get("/parsepdfmoski", async (req, res) => {
               }
 
               if (sets.length > 0) {
+              
                 results.push({
                   league: currentLeague,
                   week: currentWeek,
                   homePlayer,
                   awayPlayer,
                   sets,
-                  deadline: calculateDeadline(currentWeek), // Calculate deadline
+                  deadline: calculateDeadline(currentWeek,this.start_date), // Calculate deadline
                 });
               }
             }
@@ -919,11 +950,60 @@ app.post("/generate-schedule", (req, res) => {
     }
   );
 });
+app.post("/generate-schedule2",async (req, res) => {
+  const { player_Ids, season } = req.body;
+  console.log(req.body)
+  // Fetch player IDs
+
+
+
+      console.log(player_Ids);
+
+      shuffledPlayerIds = player_Ids;
+    
+      const schedule = generateRoundRobinSchedule(shuffledPlayerIds);
+      const alternatedSchedule = schedule;
+      console.log(schedule.length)
+      //Insert schedule into the database
+      for (let week = 0; week < alternatedSchedule.length; week++) {
+        const roundData = alternatedSchedule[week]; // Get the data for the current round
+        const round = roundData.round;
+        const match = roundData.match;
+        const homePlayerId = roundData.player1;  // Home player (player1)
+        const awayPlayerId = roundData.player2;  // Away player (player2)
+        console.log(homePlayerId)
+        // Now insert this match into your database
+        const query = "INSERT INTO schedule (week, home_player, away_player, deadline) VALUES (?, ?, ?, ?)";
+        
+        connection.query(
+            query,
+            [
+                round,  // The current round number (week)
+                homePlayerId,  // Home player ID
+                awayPlayerId,  // Away player ID
+                calculateDeadline(round,await getDate(season)),  // A function that calculates the deadline for this round
+            ],
+            (err, results) => {
+                if (err) {
+                    console.error("Error inserting match:", err);
+                } else {
+                    console.log("Inserted match:", results.insertId);
+                }
+            }
+        );
+    
+        
+       }
+
+      res.json({ message: "Schedule generated and stored in the database.",schedule:schedule });
+    
+ 
+});
 
 app.get("/calculate-standings/:id", (req, res) => {
   let leagueId = req.params.id;
-  let seasonId = req.headers.season || 1; // Assuming seasonId is 1 for now, you can dynamically fetch it if needed
-
+  let seasonId = req.headers.season || 4; // Assuming seasonId is 1 for now, you can dynamically fetch it if needed
+  
   const fetchMatchesQuery = `
     SELECT 
         s.home_player,
@@ -932,6 +1012,7 @@ app.get("/calculate-standings/:id", (req, res) => {
         aps.player_id AS away_player_id,
         s.result,
         penalty
+        
     FROM 
         schedule s
     JOIN 
@@ -996,8 +1077,10 @@ WHERE
             return;
           }
 
+          
+
           const standings = {};
-          console.log(players);
+      
           // Initialize standings for all players
           players.forEach((player) => {
             standings[player.player_season_id] = {
@@ -1011,6 +1094,9 @@ WHERE
               penalties:0
             };
           });
+
+
+
 
           matches.forEach((match) => {
             if (!match.result) {
@@ -1135,6 +1221,7 @@ WHERE
         // Compare each pair of tied players
 // Compare each pair of tied players
 tiedPlayers.forEach((playerA, indexA) => {
+ 
   tiedPlayers.slice(indexA + 1).forEach((playerB) => {
     const pairIdentifier = [playerA, playerB].sort().join("-");
     
@@ -1293,8 +1380,27 @@ tiedPlayers.forEach((playerA, indexA) => {
           };
           
           
+          
           const orderedPlayerIds = reorderStandings();
 
+          if (orderedPlayerIds.length === new Set(orderedPlayerIds.map(id => standings[id].points )).size) {
+            // If all players have unique points, clear tie-breaker stats
+            const clearTieBreakerStatsQuery = `
+              UPDATE standings
+              SET tie_breaker_stats = NULL
+              WHERE player IN (
+                SELECT player FROM players_season WHERE league_id = ? AND season_id = ?
+              )
+            `;
+          
+            connection.query(clearTieBreakerStatsQuery, [leagueId, seasonId], (err) => {
+              if (err) {
+                console.error("Error clearing tie-breaker stats:", err);
+              } else {
+                console.log("Tie-breaker stats cleared as no ties exist.");
+              }
+            });
+          }
           const updateOrInsertStandingsQuery = `
                 INSERT INTO standings (player, points, netGamesWon, setsPlayed, netSetsWon, matches_played, week, position,num_of_penalty)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)
@@ -1307,9 +1413,26 @@ tiedPlayers.forEach((playerA, indexA) => {
                     position = VALUES(position),
                     num_of_penalty= VALUES(num_of_penalty)
             `;
+           
+            const allZeroMatches = Object.values(matches).every(player => player.result=="No result");
+            let orderedPlayerIds2=[]
+            if (allZeroMatches) {
+             
+              
+             // Step 1: Sort player IDs based on player names
+   orderedPlayerIds2 = Object.keys(standings).sort(
+    (a, b) => standings[a].name.localeCompare(standings[b].name)
+  );
 
+            
+              console.log("Sorted as array:", orderedPlayerIds);
+            } else {
+              console.log("Some players have matches played.");
+            }
           // Execute one insert/update per player
-          let promises = orderedPlayerIds.map((playerSeasonId, index) => {
+
+          let promises = orderedPlayerIds2.map((playerSeasonId, index) => {
+         
             return new Promise((resolve, reject) => {
               connection.query(
                 updateOrInsertStandingsQuery,
@@ -1329,6 +1452,7 @@ tiedPlayers.forEach((playerA, indexA) => {
                   if (err) {
                     reject(err);
                   } else {
+                    
                     resolve();
                   }
                 }
@@ -1397,7 +1521,8 @@ app.get("/standings/:id", (req, res) => {
 
 app.post("/update-match-result", (req, res) => {
   const { id, result } = req.body;
-  const query = "UPDATE schedule SET result = ? WHERE id = ?";
+  
+  const query = "UPDATE schedule SET result = ? WHERE id = ? and result_confirmed=0";
 
   connection.query(query, [result, id], (err, results) => {
     if (err) {
@@ -1708,9 +1833,9 @@ app.get("/getplayers", (req, res) => {
 app.get("/getUsers", (req, res) => {
   const leagueId = req.params.id;
   const query = `
-    SELECT *,users.id, users.name, players.id AS playerId
-    FROM users
-    LEFT JOIN players ON users.id = players.user_id;
+    SELECT u.*,u.id, u.name, p.id AS playerId
+    FROM users u
+    LEFT JOIN players p ON u.id = p.user_id;
   `;
 
   connection.query(query, [leagueId], (err, results) => {
@@ -1721,10 +1846,11 @@ app.get("/getUsers", (req, res) => {
         .json({ error: "An error occurred while fetching players" });
       return;
     }
+    console.log(results)
     res.json(results);
   });
 });
-app.post("/linkplayer", (req, res) => {
+app.post("/linkplayer",verifyToken("admin"), (req, res) => {
   const { userid, playerid } = req.body;
   const query = "UPDATE players SET user_id = ? WHERE id = ?";
   connection.query(query, [userid, playerid], (err, results) => {
@@ -1736,7 +1862,49 @@ app.post("/linkplayer", (req, res) => {
       return;
     }
 
-    res.json({ message: "Tekma je bila predana" });
+    res.json({ message: "Igralec uspešno povezan!" });
+  });
+});
+app.post("/createSeason",verifyToken("admin") ,(req, res) => {
+  console.log(req.body.data)
+ let { year, start_date,end_date } = req.body.data;
+   start_date = Math.floor(new Date(start_date).getTime()/1000);
+   end_date = Math.floor(new Date(end_date).getTime()/1000);
+  const query = "INSERT INTO season (year,start_date,end_date) VALUES (?,?,?)";
+  connection.query(query, [year, start_date,end_date], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+    if(results.affectedRows>0){
+       res.json({ message: "Nova sezona uspešno vnešena" });
+    }
+
+   
+  });
+});
+app.post("/updateSeason", verifyToken("admin"),(req, res) => {
+  console.log(req.body.data)
+ let { year, start_date,end_date,status,standings_status,promotion } = req.body.data;
+   start_date = Math.floor(new Date(start_date).getTime()/1000);
+   end_date = Math.floor(new Date(end_date).getTime()/1000);
+  const query = "UPDATE season SET year=?,start_date=?,end_date=?,status=?,standings_status=?,promotion_demotion_status=? WHERE year=? ";
+  connection.query(query, [year, start_date,end_date,status,standings_status,promotion,year], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+    if(results.affectedRows>0){
+       res.json({ message: "Sezona uspešno urejena!" });
+    }
+
+   
   });
 });
 app.post("/register", (req, res) => {
@@ -2112,7 +2280,7 @@ app.post("/registerForLeagueRegisteredPlayers", (req, res) => {
     });
   });
 });
-app.get("/getTiedPlayers", (req, res) => {
+app.get("/getTiedPlayers",verifyToken("admin"), (req, res) => {
 
   // SQL query to retrieve players with tied points
   let query = `

@@ -1,5 +1,5 @@
 <div class="wrapper" *ngIf="!this.auth.isAuthenticated()">
-  <h2>Sign Up for the League</h2>
+  <h2>Prijava v ligo 2025</h2>
   <form [formGroup]="signUpForm" (ngSubmit)="onSubmit()">
     <div class="input-box">
       
@@ -9,7 +9,7 @@
         formControlName="fullName"
         required
       />
-      <mat-error *ngIf="signUpForm.get('fullName')?.invalid">
+      <mat-error *ngIf="signUpForm.get('fullName')?.invalid && signUpForm.get('fullName')?.touched ">
         Obvezno!
       </mat-error>
     </div>
@@ -23,8 +23,8 @@
         type="email"
         required
       />
-      <mat-error *ngIf="signUpForm.get('email')?.invalid">
-        A valid email is required
+      <mat-error *ngIf="signUpForm.get('email')?.invalid && signUpForm.get('email')?.touched">
+        Napačni format email naslova
       </mat-error>
     </div>
 
@@ -37,7 +37,7 @@
         type="tel"
         required
       />
-      <mat-error *ngIf="signUpForm.get('phoneNumber')?.invalid">
+      <mat-error *ngIf="signUpForm.get('phoneNumber')?.invalid && signUpForm.get('phoneNumber')?.touched">
         Obvezno!
       </mat-error>
     </div>
@@ -49,7 +49,7 @@
         <mat-option value="m">Moški</mat-option>
         <mat-option value="ž">Ženska</mat-option>
       </mat-select>
-      <mat-error *ngIf="signUpForm.get('gender')?.invalid">
+      <mat-error *ngIf="signUpForm.get('gender')?.invalid && signUpForm.get('gender')?.touched">
         Obvezno!
       </mat-error></mat-form-field>
     </div>
@@ -65,7 +65,7 @@
         type="password"
         required
       />
-      <mat-error *ngIf="signUpForm.get('password')?.invalid">
+      <mat-error *ngIf="signUpForm.get('password')?.invalid  && signUpForm.get('password')?.touched">
        Obvezno!
       </mat-error>
     </div>

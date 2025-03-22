@@ -9,11 +9,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { CommonModule } from '@angular/common';
 import { randomInt } from 'crypto';
 import { SeasonService } from '../season.service';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 
 @Component({
   selector: 'app-leaguedraw',
   standalone: true,
-  imports: [MatFormFieldModule,MatSelectModule,CommonModule],
+  imports: [MatFormFieldModule,MatSelectModule,CommonModule,MatTableModule],
   templateUrl: './leaguedraw.component.html',
   styleUrl: './leaguedraw.component.css'
 })
@@ -23,11 +24,21 @@ currentSeason: any;
   pari: any = [];
   selectedLeagueId: any;
   players: any;
+  playerlistfordraw:any[]=[]
+  playerlistforlist:any[]=[]
+  displayedColumns: string[] = ['position', 'name'];
+  dataSource = new MatTableDataSource<any>([]);
+  numofplayersleft:any=16
+  seasons:any[]=[]
   constructor(private seasonservice: SeasonService,private matchService: MatchService, private leagueService: LeaguesService,private route: ActivatedRoute,private fb: FormBuilder,private AuthService: AuthService) {
   
    }
    ngOnInit(): void {
   this.loadLeagues();
+  this.seasonservice.getSeasons().subscribe(data=>{
+this.seasons=data
+console.log(this.seasons)
+  })
    }
 
    loadLeagues(): void {
@@ -44,8 +55,10 @@ currentSeason: any;
      if (this.selectedLeagueId) {
        this.leagueService.getPlayersByLeague(this.selectedLeagueId).subscribe(data => {
          this.players = data;
-       
-this.test()
+       this.dataSource.data=[]
+       this.playerlistfordraw=[]
+       this.playerlistforlist=[]
+//
        });
      } else {
        this.players = [];
@@ -63,7 +76,32 @@ this.test()
       }
     );
    }
-
+   addToDraw(player:any){
+   
+    this.players = this.players.filter((p: { player_id: any; }) => player.player_id!= p.player_id);
+    this.playerlistforlist.push(player)
+    this.playerlistfordraw.push(player.id)
+    this.dataSource.data = [...this.playerlistforlist];
+    this.numofplayersleft=this.players.length
+console.log(this.playerlistfordraw)
+console.log(this.players)
+   }
+   manualdraw(){
+   
+    this.leagueService.manualdraw(this.playerlistfordraw,this.seasonservice.getCurrentSeason()).subscribe(
+      (response) => {
+      console.log(response)
+       
+      },
+      (error) => {
+        console.error('Registration error', error);
+      }
+    );
+   }
+   isLeagueDisabled(leagueId: number): boolean {
+    const season = this.seasons.find(s => s.leagueId == leagueId); // Adjust key based on your data structure
+    return season ? season.draw == 1 : false;
+  }
 
     
 

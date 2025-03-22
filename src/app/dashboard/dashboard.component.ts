@@ -28,17 +28,39 @@ export class DashboardComponent {
   upcomingMatches: any[] = [];
   finishedMatches: any[] = [];
   pendingResultsMatches: any[] = [];
+      
+        // Filter data into categories
+         oneWeek = 7 * 24 * 60 * 60 * 1000; // One week in milliseconds
 
+// Current time
+ now = Date.now();
+
+// Upcoming Matches: Matches whose deadlines are within 7 days from now
+// One week in milliseconds
+ twoWeeks = 14 * 24 * 60 * 60 * 1000; 
   dataSourceUpcoming = new MatTableDataSource<TennisMatch>();
   dataSourceFinished = new MatTableDataSource<TennisMatch>();
   dataSourcePendingResults = new MatTableDataSource<TennisMatch>();
 
-  displayedColumnsUpcoming: string[] = ['week', 'home_player', 'away_player', 'deadline', 'phone_away','forfeit'];
+  displayedColumnsUpcoming: string[] = ['week', 'home_player', 'away_player', 'deadline', 'phone_away','result','forfeit'];
   displayedColumnsFinished: string[] = ['week', 'home_player', 'away_player', 'result', 'deadline'];
   displayedColumnsPendingResults: string[] = ['week', 'home_player', 'away_player', 'result', 'deadline', 'phone_away'];
 
   ngOnInit(): void {
     this.loadMatches();
+    
+  }
+  displayall(){
+   
+    this.upcomingMatches=this.matches
+    this.dataSourceUpcoming.data = this.upcomingMatches;
+  }
+  activeonly(){
+    this.upcomingMatches = this.matches.filter(match => {
+      const deadline = match.deadline;
+      return (deadline > this.now + this.oneWeek && deadline <= this.now + this.twoWeeks) || (deadline < this.now + this.oneWeek) && match.result === 'No result';
+  });
+  this.dataSourceUpcoming.data = this.upcomingMatches;
   }
 
   loadMatches(): void {
@@ -47,21 +69,12 @@ export class DashboardComponent {
       (data) => {
         this.matches = data;
        
-      
-        // Filter data into categories
-        const oneWeek = 7 * 24 * 60 * 60 * 1000; // One week in milliseconds
-
-// Current time
-const now = Date.now();
-
-// Upcoming Matches: Matches whose deadlines are within 7 days from now
-// One week in milliseconds
-const twoWeeks = 14 * 24 * 60 * 60 * 1000; // Two weeks in milliseconds
+// Two weeks in milliseconds
 
 // Upcoming Matches: Show only if deadline is between 2 weeks and 1 week away
 this.upcomingMatches = this.matches.filter(match => {
     const deadline = match.deadline;
-    return deadline > now + oneWeek && deadline <= now + twoWeeks && match.result === 'No result';
+    return (deadline > this.now + this.oneWeek && deadline <= this.now + this.twoWeeks) || (deadline < this.now + this.oneWeek) && match.result === 'No result';
 });
 
 // Finished Matches: Matches that are completed
