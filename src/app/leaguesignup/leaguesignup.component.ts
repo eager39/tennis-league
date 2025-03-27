@@ -9,6 +9,7 @@ import { MatOptionModule } from '@angular/material/core';
 import { DataService } from '../data.service';
 import { AuthService } from '../auth.service';
 import { MatButton, MatButtonModule } from '@angular/material/button';
+import { LeaguesService } from '../league.service';
 @Component({
   selector: 'app-leaguesignup',
   standalone: true,
@@ -18,10 +19,17 @@ import { MatButton, MatButtonModule } from '@angular/material/button';
 })
 export class LeaguesignupComponent {
   signUpForm!: FormGroup;
-
-  constructor(private fb: FormBuilder,private dataService: DataService,public auth:AuthService) {}
+showform=true
+onlyphone=false
+  constructor(private fb: FormBuilder,private dataService: DataService,public auth:AuthService,private leagueService: LeaguesService) {}
 
   ngOnInit(): void {
+    if(this.auth.isAuthenticated()){
+      this.ifalreadyinleague();
+    }else{
+      this.showform=true
+    }
+
     this.signUpForm = this.fb.group({
       fullName: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
@@ -61,11 +69,38 @@ export class LeaguesignupComponent {
   }
   register(id:any){
     
-    this.dataService.registerForLeagueRegisteredPlayers(id).subscribe({
+    this.dataService.registerForLeagueRegisteredPlayers(id,this.signUpForm.value).subscribe({
       next: (data: any) => {
        if(data){
         alert("Uspešno ste se prijavili v ligo")
        }
+      },
+      error: (error: any) => {
+        console.error('Error fetching leagues:', error); // Error callback
+      },
+    })
+  }
+  ifalreadyinleague(){
+   
+    this.leagueService.ifalreadyinleague(this.auth.getUserId()).subscribe({
+      next: (data: any) => {
+       if(data.message=="true" ){
+        this.showform=false
+        this.onlyphone=false
+       }else if(data.message=="false" && data.message1=="true"){
+        this.showform=true
+        this.onlyphone=true 
+        this.signUpForm.get('fullName')?.clearValidators();
+      this.signUpForm.get('fullName')?.updateValueAndValidity();
+      this.signUpForm.get('email')?.clearValidators();
+      this.signUpForm.get('email')?.updateValueAndValidity();
+      this.signUpForm.get('gender')?.clearValidators();
+      this.signUpForm.get('gender')?.updateValueAndValidity();
+       }else{
+        this.showform=true
+        this.onlyphone=false
+       }
+      
       },
       error: (error: any) => {
         console.error('Error fetching leagues:', error); // Error callback

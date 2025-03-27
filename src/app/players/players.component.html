@@ -6,10 +6,14 @@
   </select>
 </div> -->
 <div>
-  <h2>Igralci</h2>
+  <h2>Igralci <button (click)="edit()" *ngIf="authService.isAuthenticated() && authService.hasRole('admin')">Urejaj igralce</button></h2>
   <ul>
-    <li *ngFor="let player of players" (dblclick)="changeleague(player.id)">
-      {{ player.name }}
+    <li *ngFor="let player of players" >
+      {{ player.name }} 
+      <span *ngIf="editplayers && authService.isAuthenticated() && authService.hasRole('admin')">
+      <mat-icon (click)="changeleague(player.id) " aria-hidden="false" aria-label="Example home icon" fontIcon="edit"></mat-icon>
+      <mat-icon (click)="removeplayer(player.id) " aria-hidden="false" aria-label="Example home icon" fontIcon="delete"></mat-icon>
+    </span>
       <mat-form-field *ngIf="showleague && player.id === selectedplayerid && authService.isAuthenticated() && authService.hasRole('admin')"> 
         <mat-label>Liga</mat-label>
         <mat-select [(value)]="newleagueid" (selectionChange)="updateLeague()">

@@ -9,46 +9,47 @@
   </mat-form-field> -->
 
   <div>
-    <label for="playerFilter">Filter by Player:</label>
+    <label for="playerFilter">Filter igralcev:</label>
     <mat-form-field appearance="fill">
-      <mat-label>Select Player</mat-label>
+      <mat-label>Izberi igralca</mat-label>
       <mat-select id="playerFilter" [(ngModel)]="selectedPlayer" (ngModelChange)="filterMatches()">
-        <mat-option value="">All Players</mat-option>
+        <mat-option value="">Vsi igralci</mat-option>
         <mat-option *ngFor="let player of players" [value]="player">{{ player }}</mat-option>
       </mat-select>
     </mat-form-field>
   
-    <label for="weekFilter">Filter by Week:</label>
+    <label for="weekFilter">Filter kol:</label>
     <mat-form-field appearance="fill">
-      <mat-label>Select Week</mat-label>
+      <mat-label>Izberi kolo</mat-label>
       <mat-select id="weekFilter" [(ngModel)]="selectedWeek" (ngModelChange)="filterMatches()">
-        <mat-option value="">All Weeks</mat-option>
+        <mat-option value="">Vsa kola</mat-option>
         <mat-option *ngFor="let week of weeks" [value]="week">{{ week }}</mat-option>
       </mat-select>
     </mat-form-field>
   </div>
+  <button (click)="removeAllMatches()" *ngIf="AuthService.isAuthenticated() && AuthService.hasRole('admin')">Izbriši vse tekme</button>
 
 <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
   <ng-container matColumnDef="week">
-    <th mat-header-cell *matHeaderCellDef> Week </th>
+    <th mat-header-cell *matHeaderCellDef> Teden </th>
     <td mat-cell *matCellDef="let match"> {{ match.week }} </td>
   </ng-container>
 
   <ng-container matColumnDef="home_player">
-    <th mat-header-cell *matHeaderCellDef> Home Player </th>
+    <th mat-header-cell *matHeaderCellDef> Domačin </th>
     <td mat-cell *matCellDef="let match"> {{ match.home_player }} </td>
   </ng-container>
 
   <ng-container matColumnDef="away_player">
-    <th mat-header-cell *matHeaderCellDef> Away Player </th>
+    <th mat-header-cell *matHeaderCellDef> Gost </th>
     <td mat-cell *matCellDef="let match"> {{ match.away_player }} </td>
   </ng-container>
 
   <ng-container matColumnDef="result">
-    <th mat-header-cell *matHeaderCellDef> Result </th>
+    <th mat-header-cell *matHeaderCellDef> Rezultat </th>
     <td mat-cell *matCellDef="let match">
       <span  *ngIf="(editingMatch !== match && !checkNames(match.home_player)) " >{{match.result}}</span>
-      <span  *ngIf="(editingMatch !== match && checkNames(match.home_player))"  (dblclick)="editResult(match) ">{{match.result}}</span>
+      <span  *ngIf="(editingMatch !== match && checkNames(match.home_player))"  >{{match.result}} <mat-icon (click)="editResult(match) " aria-hidden="false" aria-label="Example home icon" fontIcon="edit"></mat-icon></span>
       <div *ngIf="editingMatch === match">
         <form [formGroup]="resultForm" (ngSubmit)="updateResult(match.id)" (focusout)="onFocusOut($event)">
           <input #resultInput matInput formControlName="newResult"  placeholder="Enter result (e.g., 6-4, 4-6, 6-3)" required />

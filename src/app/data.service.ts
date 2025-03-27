@@ -40,9 +40,9 @@ export class DataService {
    
     return this.http.post(environment.apiUrl+"/registerForLeagueNonUserPlayers", { form });
   }
-  registerForLeagueRegisteredPlayers(form:object): Observable<any> {
+  registerForLeagueRegisteredPlayers(id:object,form:object): Observable<any> {
    
-    return this.http.post(environment.apiUrl+"/registerForLeagueRegisteredPlayers", { form });
+    return this.http.post(environment.apiUrl+"/registerForLeagueRegisteredPlayers", { id, form});
   }
  
 

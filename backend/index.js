@@ -1,8 +1,10 @@
 var express = require("express");
 var fs = require("fs");
-
+const dotenv=require("dotenv")
+dotenv.config();
 const https = require("https");
-
+const nodemailer = require('nodemailer');
+const Mailgen = require('mailgen');
 const options = {
   key: fs.readFileSync("cert/key.pem"), //Change Private Key Path here
   cert: fs.readFileSync("cert/certificate.pem"), //Change Main Certificate Path here
@@ -37,16 +39,16 @@ app.use(function (req, res, next) {
 // Create MySQL connection
 const connection = mysql.createPool({
   host: 'localhost',
-  user: 'eager39',
-  password: 'krizanic',
+  user: process.env.DBuser,
+  password: process.env.DBpass,
   database: 'tennis_league_local',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
-https.createServer(options, app).listen(8443, function (req, res) {
+https.createServer(options, app).listen(process.env.PORT, function (req, res) {
   console.log(res); //Change Port Number here (if required, 443 is the standard port for https)
-  console.log("Server started at port 3000");
+  console.log("Server started at port "+process.env.PORT);
 });
 
 // Utility function to shuffle an array
@@ -57,6 +59,7 @@ function shuffle(array) {
   }
   return array;
 }
+
 
 app.get("/deadline", async (req, res) => {
   updateScheduleWithDates();
@@ -80,7 +83,38 @@ app.get("/getSeasons", async (req, res) => {
     res.json(results);
   });
 });
+async function sendEmail(usermail,sporocilo) {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.Gmailuser, // Your Gmail address
+        pass: process.env.Gmailpass  // Your Gmail password
+      }
+    });
 
+    const message = {
+      from: 'krizaniczan@gmail.com',
+      to: usermail,
+      subject: 'Welcome to Tennis!',
+      html: sporocilo,
+    };
+
+    const info = await transporter.sendMail(message);
+
+    console.log("Email sent:", info.messageId);
+    console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+
+    return {
+      msg: "Email sent successfully",
+      info: info.messageId,
+      preview: nodemailer.getTestMessageUrl(info),
+    };
+  } catch (error) {
+    console.error("Email sending failed:", error);
+    return { msg: "Email sending failed", error: error.message };
+  }
+}
 
 app.get("/getMyMatches",verifyToken("user"), (req, res) => {
 
@@ -1383,24 +1417,24 @@ tiedPlayers.forEach((playerA, indexA) => {
           
           const orderedPlayerIds = reorderStandings();
 
-          if (orderedPlayerIds.length === new Set(orderedPlayerIds.map(id => standings[id].points )).size) {
-            // If all players have unique points, clear tie-breaker stats
-            const clearTieBreakerStatsQuery = `
-              UPDATE standings
-              SET tie_breaker_stats = NULL
-              WHERE player IN (
-                SELECT player FROM players_season WHERE league_id = ? AND season_id = ?
-              )
-            `;
+          // if (orderedPlayerIds.length === new Set(orderedPlayerIds.map(id => standings[id].points )).size) {
+          //   // If all players have unique points, clear tie-breaker stats
+          //   const clearTieBreakerStatsQuery = `
+          //     UPDATE standings
+          //     SET tie_breaker_stats = NULL
+          //     WHERE player IN (
+          //       SELECT player FROM players_season WHERE league_id = ? AND season_id = ?
+          //     )
+          //   `;
           
-            connection.query(clearTieBreakerStatsQuery, [leagueId, seasonId], (err) => {
-              if (err) {
-                console.error("Error clearing tie-breaker stats:", err);
-              } else {
-                console.log("Tie-breaker stats cleared as no ties exist.");
-              }
-            });
-          }
+          //   connection.query(clearTieBreakerStatsQuery, [leagueId, seasonId], (err) => {
+          //     if (err) {
+          //       console.error("Error clearing tie-breaker stats:", err);
+          //     } else {
+          //       console.log("Tie-breaker stats cleared as no ties exist.");
+          //     }
+          //   });
+          // }
           const updateOrInsertStandingsQuery = `
                 INSERT INTO standings (player, points, netGamesWon, setsPlayed, netSetsWon, matches_played, week, position,num_of_penalty)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)
@@ -1427,6 +1461,7 @@ tiedPlayers.forEach((playerA, indexA) => {
             
               console.log("Sorted as array:", orderedPlayerIds);
             } else {
+              orderedPlayerIds2=orderedPlayerIds
               console.log("Some players have matches played.");
             }
           // Execute one insert/update per player
@@ -1536,6 +1571,44 @@ app.post("/update-match-result", (req, res) => {
     res.json({ message: "Match result updated successfully" });
   });
 });
+app.post("/ifalreadyinleague", (req, res) => {
+  const { id } = req.body;
+  const { season } = req.headers;
+  
+  const query = "SELECT players_season.id  FROM players LEFT JOIN players_season on players.id=players_season.player_id WHERE players.user_id=? and players_season.season_id=?";
+
+  const query1 = "SELECT players.id FROM players WHERE players.user_id=?";
+
+  connection.query(query, [id, season], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+    connection.query(query1, [id], (err, results1) => {
+      if (err) {
+        console.error("Error updating match result:", err);
+        res
+          .status(500)
+          .json({ error: "An error occurred while updating match result" });
+        return;
+      }
+    console.log(results)
+    console.log(results1)
+    if(results.length>0){
+       res.json({ message: "true" });
+    }else if(results.length==0 && results1.length>0){
+      res.json({ message: "false",message1:"true" });
+    }else{
+      res.json({ message: "false" });
+    }
+
+  });
+  });
+});
+
 app.post("/promote", (req, res) => {
   const { id, status,seasonid } = req.body;
   const query = "UPDATE players_season SET promotion_status = ? WHERE id = ? and season_id=?";
@@ -1582,6 +1655,40 @@ app.post("/changePlayerLeague", (req, res) => {
     }
     console.log(results)
     res.status(200).json({ message: "Uspešno spremenjena liga igralca" });
+  });
+});
+app.post("/removePlayer", (req, res) => {
+  const { id } = req.body;
+  const query = "DELETE FROM players_season WHERE id = ?";
+
+  connection.query(query, [id], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+    console.log(results)
+    res.status(200).json({ message: "Igralec uspešno odstranjen!" });
+  });
+});
+app.post("/removeAllMatches", (req, res) => {
+  const { id} = req.body;
+  const {season} =req.headers
+ 
+  const query = "DELETE schedule FROM schedule LEFT JOIN players_season on players_season.id=schedule.home_player WHERE schedule.result='no result' and players_season.season_id=? and players_season.league_id=?";
+
+  connection.query(query, [season,id], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+    console.log(results)
+    res.status(200).json({ message: "Igralec uspešno odstranjen!" });
   });
 });
 app.post("/demote", (req, res) => {
@@ -1909,15 +2016,16 @@ app.post("/updateSeason", verifyToken("admin"),(req, res) => {
 });
 app.post("/register", (req, res) => {
   users = [];
-  const { name, phone, email, password,country,phonePrefix } = req.body;
+  let message="Registracija uspešna! Za potrditev vašega računa kliknite na naslednji link: "
+  const { name, phone, email, password,country,phonePrefix,gender } = req.body;
   const hashedPassword = bcrypt.hashSync(password, 8);
   users.push({ email, password: hashedPassword });
   const query =
-    "INSERT INTO users (name,phone,email,password,drzava,phoneaffix) VALUES (?,?,?,?,?,?)";
+    "INSERT INTO users (name,phone,email,password,drzava,phoneaffix,gender) VALUES (?,?,?,?,?,?,?)";
 
   connection.query(
     query,
-    [name, phone, email, hashedPassword,country,phonePrefix],
+    [name, phone, email, hashedPassword,country,phonePrefix,gender],
     (err, results) => {
       if (err) {
         console.error("Error inserting user", err);
@@ -1927,6 +2035,7 @@ app.post("/register", (req, res) => {
         console.log(results.affectedRows>0)
         console.log(results)
         if(results.affectedRows>0){
+          sendEmail(email,message)
           res.json(results);
         }
         
@@ -1962,24 +2071,25 @@ app.post("/login", (req, res) => {
         "secret",
         { expiresIn: "24h" }
       );
-
+       sendEmail();
       res.send({ token });
     } else {
-      res.status(401).send("Invalid credentials");
+      res.status(401).send("Napačno geslo!");
     }
   });
 });
 app.post("/registerForLeagueNonUserPlayers", (req, res) => {
   const { fullName, phoneNumber, email, gender, password } = req.body.form;
 console.log(req.body)
-  // Function to register a player for a league with tier adjustment based on promotion/relegation
-  const registerPlayerForLeague = (fullName, leagueId, seasonId, phone, email, password, callback) => {
-    let league_id;
+ let league_id;
     if (gender == "ž") {
       league_id = 6; // Women's league ID
     } else {
       league_id = 5; // Men's league ID
     }
+  // Function to register a player for a league with tier adjustment based on promotion/relegation
+  const registerPlayerForLeague = (fullName, leagueId, seasonId, phone, email, password, callback) => {
+   
 
     // Step 1: Check if the player exists using either "first name last name" or "last name first name"
     const checkPlayerQuery = `
@@ -2166,10 +2276,10 @@ console.log(req.body)
   };
 
   // Example usage
-  const leagueId = 5;
+  
   const seasonId = 4; // Example season ID
 
-  registerPlayerForLeague(fullName, leagueId, seasonId, phoneNumber, email, password, (err, result) => {
+  registerPlayerForLeague(fullName, league_id, seasonId, phoneNumber, email, password, (err, result) => {
     if (err) {
       console.error('Error registering player:', err);
       //res.status(400).json({ error: err });
@@ -2180,106 +2290,138 @@ console.log(req.body)
   });
 });
 app.post("/registerForLeagueRegisteredPlayers", (req, res) => {
-  const  userId = req.body.form; // We assume userId is passed directly
-
- 
-
+  const userId = req.body.id; // We assume userId is passed directly
+  const name=req.body.form.fullName
+  const email=req.body.form.email
+  const phone=req.body.form.phoneNumber
+  const gender=req.body.form.gender
   const seasonId = 4; // Example season ID
-
+console.log(req.body)
   // Step 1: Check if the player exists and retrieve their player_id using the known user_id
   const findPlayerQuery = `
-    SELECT id 
+    SELECT *,players.id as id_player
     FROM players 
+    LEFT JOIN users on players.user_id=users.id 
     WHERE user_id = ?
   `;
 
   connection.query(findPlayerQuery, [userId], (err, playerResults) => {
     if (err) {
-      console.error('Error finding player:', err);
+      console.error("Error finding player:", err);
       res.status(500).json({ error: "Error finding player" });
       return;
     }
 
     if (playerResults.length === 0) {
-      console.error('Player not found for user');
-      res.status(404).json({ error: "Player not found" });
-      return;
-    }
-
-    const playerId = playerResults[0].id;
-
-    // Step 2: Check player's promotion status and current tier, if needed
-    const checkPromotionAndTierQuery = `
-      SELECT ps.league_id, ps.promotion_status, l.tier
-      FROM players_season ps 
-      JOIN leagues l ON ps.league_id = l.id 
-      JOIN season ON season.id = ps.season_id
-      WHERE ps.player_id = ? 
-      ORDER BY season.year DESC 
-      LIMIT 1
-    `;
-
-    connection.query(checkPromotionAndTierQuery, [playerId], (err, promotionResults) => {
-      if (err) {
-        console.error('Error checking promotion status and tier:', err);
-        res.status(500).json({ error: "Error checking promotion status" });
-        return;
-      }
-
-      let currentTier = 5; // Default tier
-      if (promotionResults.length > 0) {
-        const promotionStatus = promotionResults[0].promotion_status;
-        currentTier = promotionResults[0].tier;
-
-        if (promotionStatus === 'promoted') {
-          currentTier -= 1; // Move to a higher tier
-        } else if (promotionStatus === 'relegated') {
-          currentTier += 1; // Move to a lower tier
-        }
-      }
-
-      // Step 3: Find the new league ID for the updated tier, if needed
-      const getNewLeagueIdQuery = `
-        SELECT id 
-        FROM leagues 
-        WHERE tier = ?
+      // Player not found, insert into players table
+      const insertPlayerQuery = `
+        INSERT INTO players (name,user_id,phone,email,gender) 
+        VALUES (?,?,?,?,?)
       `;
+      console.log(name,userId,phone,email)
 
-      connection.query(getNewLeagueIdQuery, [currentTier], (err, leagueResults) => {
+      connection.query(insertPlayerQuery, [name,userId,phone,email,gender], (err, insertResult) => {
         if (err) {
-          console.error('Error fetching league for the new tier:', err);
-          res.status(500).json({ error: "Error fetching league" });
+          console.error("Error inserting new player:", err);
+          res.status(500).json({ error: "Error inserting new player" });
           return;
         }
 
-        if (leagueResults.length > 0) {
-          const newLeagueId = leagueResults[0].id;
+        // Fetch the newly inserted player's ID
+        const newPlayerId = insertResult.insertId;
 
-          // Step 4: Insert or update the player in the players_season table
-          const insertPlayersSeasonQuery = `
-            INSERT INTO players_season (player_id, league_id, season_id) 
-            VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE league_id = VALUES(league_id), season_id = VALUES(season_id)
-          `;
+        console.log("New player inserted with ID:", newPlayerId);
 
-          connection.query(insertPlayersSeasonQuery, [playerId, newLeagueId, seasonId], (err, result) => {
-            if (err) {
-              console.error('Error inserting into players_season:', err);
-              res.status(500).json({ error: "Error inserting into players_season" });
-              return;
-            }
-
-            console.log('Player successfully registered for the league and season');
-            res.status(200).json({ message: 'Player registered successfully!' });
-          });
-        } else {
-          console.error('No league found for the adjusted tier');
-          res.status(500).json({ error: "No league found for the adjusted tier" });
-        }
+        // Proceed with league registration using new player ID
+        registerPlayerForLeague(newPlayerId, seasonId, res,gender);
       });
-    });
+    } else {
+   let gender1=playerResults[0].gender
+      const playerId = playerResults[0].id_player; 
+        console.log(gender)
+      registerPlayerForLeague(playerId, seasonId, res,gender1);
+    }
   });
 });
+
+// Function to handle league registration
+function registerPlayerForLeague(playerId, seasonId, res,gender) {
+  const checkPromotionAndTierQuery = `
+    SELECT ps.league_id, ps.promotion_status, l.tier
+    FROM players_season ps 
+    JOIN leagues l ON ps.league_id = l.id 
+    JOIN season ON season.id = ps.season_id
+    WHERE ps.player_id = ? 
+    ORDER BY season.year DESC 
+    LIMIT 1
+  `;
+
+  connection.query(checkPromotionAndTierQuery, [playerId], (err, promotionResults) => {
+    if (err) {
+      console.error("Error checking promotion status and tier:", err);
+      res.status(500).json({ error: "Error checking promotion status" });
+      return;
+    }
+    let currentTier = '';
+    if(gender=="m"){
+      currentTier = 5; // Default tier
+    }else{
+       currentTier = 6; // Default tier for women
+    }
+   
+    if (promotionResults.length > 0) {
+      const promotionStatus = promotionResults[0].promotion_status;
+      currentTier = promotionResults[0].tier;
+
+      if (promotionStatus === "promoted") {
+        currentTier -= 1; // Move to a higher tier
+      } else if (promotionStatus === "relegated") {
+        currentTier += 1; // Move to a lower tier
+      }
+    }
+
+    // Step 3: Find the new league ID for the updated tier
+    const getNewLeagueIdQuery = `
+      SELECT id 
+      FROM leagues 
+      WHERE tier = ?
+    `;
+
+    connection.query(getNewLeagueIdQuery, [currentTier], (err, leagueResults) => {
+      if (err) {
+        console.error("Error fetching league for the new tier:", err);
+        res.status(500).json({ error: "Error fetching league" });
+        return;
+      }
+
+      if (leagueResults.length > 0) {
+        const newLeagueId = leagueResults[0].id;
+
+        // Step 4: Insert or update the player in the players_season table
+        const insertPlayersSeasonQuery = `
+          INSERT INTO players_season (player_id, league_id, season_id) 
+          VALUES (?, ?, ?)
+         
+        `;
+        console.log(playerId, newLeagueId, seasonId)
+        connection.query(insertPlayersSeasonQuery, [playerId, newLeagueId, seasonId], (err, result) => {
+          if (err) {
+            console.error("Error inserting into players_season:", err);
+            res.status(500).json({ error: "Error inserting into players_season" });
+            return;
+          }
+          console.log(result)
+          console.log("Player successfully registered for the league and season");
+          res.status(200).json({ message: "Player registered successfully!" });
+        });
+      } else {
+        console.error("No league found for the adjusted tier");
+        res.status(500).json({ error: "No league found for the adjusted tier" });
+      }
+    });
+  });
+}
+
 app.get("/getTiedPlayers",verifyToken("admin"), (req, res) => {
 
   // SQL query to retrieve players with tied points

@@ -5,7 +5,7 @@
 /tmp
 /out-tsc
 /bazel-out
-
+.env
 # Node
 
 /node_modules
@@ -56,3 +56,4 @@ backend/5_kolo_objava.pdf
 backend/4_kolo_objava.pdf
 backend/3_kolo_objava.pdf
 backend/2_kolo_objava.pdf
+

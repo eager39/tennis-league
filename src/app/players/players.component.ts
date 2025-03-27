@@ -8,11 +8,13 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../auth.service';
+import { LoadingService } from '../loadingservice.service';
+import { MatIconModule } from '@angular/material/icon';
 @Component({
   selector: 'app-players',
   templateUrl: './players.component.html',
   styleUrls: ['./players.component.css'],
-  imports: [CommonModule,MatFormFieldModule,MatSelectModule, MatInputModule, FormsModule],
+  imports: [CommonModule,MatFormFieldModule,MatSelectModule, MatInputModule, FormsModule,MatIconModule],
   standalone: true,
   
 })
@@ -22,8 +24,9 @@ export class PlayersComponent implements OnInit {
   newleagueid: any;
   selectedLeagueId: string | null = null;
   showleague=false;
+  editplayers=false
   selectedplayerid:any
-  constructor(private leaguesService: LeaguesService,private route: ActivatedRoute,public authService: AuthService) {}
+  constructor(private leaguesService: LeaguesService,private route: ActivatedRoute,public authService: AuthService,private loadingService: LoadingService) {}
 
   ngOnInit() {
     this.leaguesService.getLeagues().subscribe(data => {
@@ -68,4 +71,26 @@ export class PlayersComponent implements OnInit {
      })
    
   }
+  removeplayer(id:number){
+  
+  this.selectedplayerid=id
+  
+    this.leaguesService.removePlayer(this.selectedplayerid).subscribe((data) => {
+    if(data){
+     
+     this.onLeagueChange()
+     this.showleague=false
+    }else{
+     alert("fail")
+    }
+    })
+  
+ }
+ edit(){
+  if(this.editplayers==false){
+    this.editplayers=true
+  }else{
+    this.editplayers=false
+  }
+ }
 }

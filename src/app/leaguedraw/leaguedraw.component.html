@@ -16,8 +16,15 @@
       <mat-option *ngFor="let player of players"  [value]="player">{{player.name}}</mat-option>
     </mat-select>
   </mat-form-field>
+   <ul *ngFor="let player of players">
+       <li ><button (click)="addToDraw(player) " >{{player.name}}</button> </li> 
+
+    </ul>
 <div class="tabela">
   <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+    
+   
+   
 
     <!-- Position Column -->
     <ng-container matColumnDef="position">

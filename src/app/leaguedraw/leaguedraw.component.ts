@@ -10,11 +10,12 @@ import { CommonModule } from '@angular/common';
 import { randomInt } from 'crypto';
 import { SeasonService } from '../season.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-leaguedraw',
   standalone: true,
-  imports: [MatFormFieldModule,MatSelectModule,CommonModule,MatTableModule],
+  imports: [MatFormFieldModule,MatSelectModule,CommonModule,MatTableModule,MatIconModule],
   templateUrl: './leaguedraw.component.html',
   styleUrl: './leaguedraw.component.css'
 })

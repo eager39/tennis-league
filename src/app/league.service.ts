@@ -48,6 +48,10 @@ export class LeaguesService {
   
     return this.http.post(environment.apiUrl+"/changePlayerLeague", { 'id': id,"newleagueid":newleagueid});
   }
+  removePlayer(id: number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/removePlayer", { 'id': id});
+  }
   draw(league: number,season:number): Observable<any> {
   
     return this.http.post(environment.apiUrl+"/generate-schedule", { 'liga': league,"season":season});
@@ -64,6 +68,15 @@ export class LeaguesService {
   
     return this.http.post(environment.apiUrl+"/checkstatus", { 'seasonid': seasonid });
   }
+  removeAllMatches(id: number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/removeAllMatches", { 'id': id});
+  }
+  ifalreadyinleague(id: number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/ifalreadyinleague", { 'id': id});
+  }
+
 
   
 }

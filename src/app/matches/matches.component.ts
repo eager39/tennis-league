@@ -12,12 +12,13 @@ import { MatInput, MatInputModule } from '@angular/material/input';
 import { ActivatedRoute, Params } from '@angular/router';
 import { map } from 'rxjs/internal/operators/map';
 import { AuthService } from '../auth.service';
+import { MatIcon, MatIconModule } from '@angular/material/icon';
 @Component({
   selector: 'app-matches',
   templateUrl: './matches.component.html',
   styleUrls: ['./matches.component.css'],
   standalone: true,
-  imports:[MatFormFieldModule,MatSelectModule,MatSelect,FormsModule,MatTableModule,MatPaginatorModule,CommonModule,ReactiveFormsModule,MatInputModule ]
+  imports:[MatFormFieldModule,MatSelectModule,MatSelect,FormsModule,MatTableModule,MatPaginatorModule,CommonModule,ReactiveFormsModule,MatInputModule ,MatIconModule]
 })
 export class MatchesComponent implements OnInit, AfterViewInit {
   matches: TennisMatch[] = [];
@@ -38,7 +39,7 @@ export class MatchesComponent implements OnInit, AfterViewInit {
   editingMatch: any = null;
   
 
-  constructor(private matchService: MatchService, private leagueService: LeaguesService,private route: ActivatedRoute,private fb: FormBuilder,private AuthService: AuthService) {
+  constructor(private matchService: MatchService, private leagueService: LeaguesService,private route: ActivatedRoute,private fb: FormBuilder,public AuthService: AuthService) {
     this.resultForm = this.fb.group({
       newResult: ['', [Validators.required, this.tennisScoreValidator]]
     });
@@ -53,6 +54,24 @@ export class MatchesComponent implements OnInit, AfterViewInit {
        
         this.loadMatches()
       })
+}
+removeAllMatches(){
+ 
+  
+    this.selectedLeagueId
+    
+      this.leagueService.removeAllMatches(this.selectedLeagueId).subscribe((data) => {
+      if(data){
+       alert("uspešno!")
+
+       this.onLeagueChange()
+       
+      }else{
+       alert("fail")
+      }
+      })
+    
+   
 }
 checkNames(name:string){
 return this.AuthService.userMatchesPlayer(name)
@@ -98,7 +117,10 @@ return this.AuthService.userMatchesPlayer(name)
           this.matches = data;
           this.dataSource.data = data;
           this.extractPlayersAndWeeks(data);
+          console.log("haha")
+           this.selectedPlayer=''
           this.filterMatches();
+        
         },
         (error) => {
           console.error('Error fetching matches:', error);
@@ -120,6 +142,7 @@ return this.AuthService.userMatchesPlayer(name)
       : () => true;
   
     this.dataSource.data = this.matches.filter(match => playerFilter(match) && weekFilter(match));
+    this.selectedPlayer=''
   }
 
   extractPlayersAndWeeks(matches: TennisMatch[]): void {

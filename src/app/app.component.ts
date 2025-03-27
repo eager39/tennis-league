@@ -14,6 +14,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SidenavComponent } from './sidenav/sidenav.component';
 import { SeasonselectorComponent } from "./seasonselector/seasonselector.component";
+import { LoadingIndicatorComponent } from "./loading-indicator/loading-indicator.component";
 
 
 
@@ -21,7 +22,7 @@ import { SeasonselectorComponent } from "./seasonselector/seasonselector.compone
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [MatCommonModule, SidenavComponent,SeasonselectorComponent, MatIconModule, CommonModule, MatExpansionModule, MatListModule, MatButtonModule, MatSidenavModule, MatMenuModule, MatToolbarModule, MatTooltipModule, RouterModule, MatCommonModule, SidenavComponent, SeasonselectorComponent],
+  imports: [MatCommonModule, SidenavComponent, SeasonselectorComponent, MatIconModule, CommonModule, MatExpansionModule, MatListModule, MatButtonModule, MatSidenavModule, MatMenuModule, MatToolbarModule, MatTooltipModule, RouterModule, MatCommonModule, SidenavComponent, SeasonselectorComponent, LoadingIndicatorComponent,RouterModule],
 
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
