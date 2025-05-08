@@ -74,7 +74,19 @@
   </ng-container>
   <ng-container matColumnDef="penalty">
     <th mat-header-cell *matHeaderCellDef> Kazenska točka </th>
-    <td mat-cell *matCellDef="let match"  (click)="penalty(match.home_player_s_id,match.id)">{{ match.home_player }}   </td>
+    <td mat-cell *matCellDef="let match">
+      <span
+        style="cursor: pointer; color: blue; margin-right: 10px;"
+        (click)="penalty(match.home_player_s_id, match.id)">
+        {{ match.home_player }}
+      </span>
+      |
+      <span
+        style="cursor: pointer; color: green; margin-left: 10px;"
+        (click)="penalty(match.away_player_s_id, match.id)">
+        {{ match.away_player }}
+      </span>
+    </td>
   </ng-container>
 
   <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>

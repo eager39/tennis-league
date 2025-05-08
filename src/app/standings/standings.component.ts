@@ -40,7 +40,7 @@ export class StandingsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadLeagues(); // Load leagues data on initialization
-    this.loadStandings();
+   // this.loadStandings();
     
     this.route.params.subscribe(
       (params: Params) => {

@@ -45,6 +45,7 @@ export class PlayersComponent implements OnInit {
     if (this.selectedLeagueId) {
       this.leaguesService.getPlayersByLeague(this.selectedLeagueId).subscribe(data => {
         this.players = data;
+        this.newleagueid=''
       });
     } else {
       this.players = [];

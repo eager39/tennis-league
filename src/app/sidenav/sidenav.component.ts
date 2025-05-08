@@ -35,6 +35,13 @@ export class SidenavComponent {
   this.fetchLeagues()
 });
 }
+isInApril(): boolean {
+  const d = new Date(Date());
+  const year = d.getFullYear();
+  const start = new Date(year, 3, 1); // April 1 (month is 0-indexed: 3 = April)
+  const end = new Date(year, 3, 30, 23, 59, 59, 999); // April 30 end of day
+  return d >= start && d <= end;
+}
 fetchLeagues(): void {
   this.leagueService.getLeagues().subscribe({
     next: (data: leagues[]) => {

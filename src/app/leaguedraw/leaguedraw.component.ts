@@ -89,7 +89,7 @@ console.log(this.players)
    }
    manualdraw(){
    
-    this.leagueService.manualdraw(this.playerlistfordraw,this.seasonservice.getCurrentSeason()).subscribe(
+    this.leagueService.manualdraw(this.playerlistfordraw,this.seasonservice.getCurrentSeason(),this.selectedLeagueId).subscribe(
       (response) => {
       console.log(response)
        

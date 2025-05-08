@@ -230,8 +230,23 @@ for (let r = 1; r < 1 + playerArray.length - 1; r++) {
     }
     matches = [...matches, ...round];
 }
+const totalRounds = playerArray.length - 1;
+if(totalRounds<9){
+  const secondHalf = matches
+    .filter(m => m.round <= totalRounds)
+    .map(m => ({
+        round: m.round + totalRounds,
+        match: m.match,
+        player1: m.player2,
+        player2: m.player1
+    }));
+
+matches = [...matches, ...secondHalf];
+console.log(secondHalf)
 //console.log(matches)
 console.log(matches)
+}
+
 return matches;
 
 }
@@ -611,12 +626,12 @@ console.log("asd"+this.start_date)
 
 app.get("/parsepdfzenske", async (req, res) => {
   const url =
-    "http://www.tenis-radgona.si/images/stories/liga_2024/rezultati_Ĺľenske_2023.pdf";
+    "http://www.tenis-radgona.si/images/stories/liga_2024/rezultati_ženske_2023.pdf";
   let dataBuffer = "";
 
   // Reading PDF file from local path
   dataBuffer = fs.readFileSync(
-    "../../../../../../Users/zan_s/Desktop/rezultati lige/rezultati_Ĺľenske_2024.pdf"
+    "../../../../../../Users/zan_s/Desktop/rezultati lige/rezultati_ženske_2024.pdf"
   );
 
   // Parse PDF data
@@ -2173,6 +2188,15 @@ console.log(req.body)
               }
             });
           } else {
+            if(gender==ž){
+		
+              const newLeagueId = 6;
+           
+
+            // Step 4: Insert or update the player in the players_season table
+            insertIntoPlayersSeason(playerId, newLeagueId, seasonId, callback);
+          }
+
             console.error('No promotion data found for player');
             callback('No promotion data found for player', null);
           }
@@ -2180,9 +2204,9 @@ console.log(req.body)
 
       } else {
         // Step 5: Player doesn't exist, insert into the players table
-        const insertPlayerQuery = 'INSERT INTO players (name, phone, email) VALUES (?, ?, ?)';
+        const insertPlayerQuery = 'INSERT INTO players (name, phone, email,gender) VALUES (?, ?, ?,?)';
 
-        connection.query(insertPlayerQuery, [fullName, phone, email], (err, result) => {
+        connection.query(insertPlayerQuery, [fullName, phone, email,gender], (err, result) => {
           if (err) {
             console.error('Error inserting player:', err);
             callback(err, null);
