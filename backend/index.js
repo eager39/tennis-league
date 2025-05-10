@@ -242,25 +242,12 @@ if(totalRounds<9){
     }));
 
 matches = [...matches, ...secondHalf];
-console.log(secondHalf)
-//console.log(matches)
-console.log(matches)
+
 }
 
 return matches;
 
 }
-
-// If double round-robin, duplicate the schedule with reversed matches
-
-
-
-
-
-
-
-
-// Function to generate a random tennis score
 
 async function getDate(season){
   return new Promise((resolve, reject) => {
@@ -294,608 +281,280 @@ function calculateDeadline(week,start_date) {
   // Return the epoch time (timestamp in milliseconds)
   return deadlineDate.getTime();
 }
-// Endpoint to parse PDFs
-app.get("/parsepdfmoski", async (req, res) => {
-  const url = "http://www.tenis-radgona.si/images/stories/liga_2024/";
-  let dataBuffer = "";
-  start_date=''
-  
 
 
+// app.get("/parsepdfzenske", async (req, res) => {
+//   const url =
+//     "http://www.tenis-radgona.si/images/stories/liga_2024/rezultati_ženske_2023.pdf";
+//   let dataBuffer = "";
 
-//   console.log(start_date)
-console.log("asd"+this.start_date)
-  for (let i = 1; i < 16; i++) {
-    try {
-      const config = {
-        method: "get",
-        url: `${url}${i}_kolo_objava.pdf`,
-        responseType: "arraybuffer",
-      };
+//   // Reading PDF file from local path
+//   dataBuffer = fs.readFileSync(
+//     "../../../../../../Users/zan_s/Desktop/rezultati lige/rezultati_ženske_2024.pdf"
+//   );
 
-     // console.log(`Fetching ${i}.pdf...`);
-      const response = await axios(config);
+//   // Parse PDF data
+//   let data;
+//   try {
+//     data = await pdfparse(dataBuffer);
+//   } catch (error) {
+//     console.error("Failed to parse PDF data:", error);
+//     res.status(500).json({ message: "Failed to parse PDF data" });
+//     return;
+//   }
 
-      dataBuffer = Buffer.from(response.data);
-    //  console.log(`${i}.pdf fetched successfully!`);
-    } catch (error) {
-      console.error(`Failed to fetch ${i}.pdf:`, error);
-      continue; // Skip to the next iteration if fetching fails
-    }
+//   function parseMatchData(data) {
+//     const lines = data["text"].split("\n").filter((line) => line.trim() !== "");
 
-    // Process the PDF data
-    pdfparse(dataBuffer)
-      .then(async function (data) {
-        this.start_date=await getDate(1)
-        const lines = data["text"]
-          .split("\n")
-          .filter((line) => line.trim() !== "");
-       // console.log(lines);
-        const results = [];
-        let currentLeague = "";
-        let currentWeek = "";
-        //console.log(lines);
-        lines.forEach((line) => {
-          const leagueMatch = line.match(/^(\d+ liga|[^\d].* liga)/);
-          const weekMatch = line.match(/^Rezultati\s*(\d+)\s*kolo/);
+//     const results = [];
+//     let currentWeek = "";
+//     let homePlayer, awayPlayer;
 
-          if (weekMatch) {
-            currentWeek = weekMatch[1];
-          }
+//     for (let i = 0; i < lines.length; i++) {
+//       const line = lines[i];
 
-          if (leagueMatch) {
-            currentLeague = leagueMatch[0].trim();
-          } else {
-            const matchDetails = line.match(
-              /^([^:]+):([^0-9]+)([\d:]+(?:[\d:]+)*)$/
-            );
-            if (matchDetails) {
-              const homePlayer = matchDetails[1].trim();
-              const awayPlayer = matchDetails[2].trim();
-              let sets = matchDetails[3];
+//       // Match the week line
+//       const weekMatch = line.match(/^(\d+\.?\s*kolo)/);
+//       if (weekMatch) {
+//         currentWeek = weekMatch[1].match(/\d+/)[0];
+//         continue;
+//       }
 
-              sets = sets
-                .replace(/:/g, "-")
-                .replace(/(\d-\d)(?=\d-\d)/g, "$1,");
-              if (sets == "0-0,0-0,0-0") {
-                sets = ["No result"];
-              } else {
-                sets = sets
-                  .split(",")
-                  .map((set) => set.trim())
-                  .filter((set) => !/^0-0$/.test(set));
-              }
+//       // Skip the 'rezultat' line
+//       if (line.includes(":")) {
+//         [homePlayer, awayPlayer] = line.split(":").map((str) => str.trim());
+//         continue;
+//       }
 
-              if (sets.length > 0) {
-              
-                results.push({
-                  league: currentLeague,
-                  week: currentWeek,
-                  homePlayer,
-                  awayPlayer,
-                  sets,
-                  deadline: calculateDeadline(currentWeek,this.start_date), // Calculate deadline
-                });
-              }
-            }
-          }
-        });
+//       // Handle match results
+//       if (line == "000000") {
+//         results.push({
+//           week: currentWeek,
+//           homePlayer: homePlayer,
+//           awayPlayer: awayPlayer,
+//           matchResult: "No result",
+//           league: 6, // Assuming league 6 for women's league
+//           deadline: calculateDeadline(currentWeek),
+//         });
+//       } else if (!isNaN(line)) {
+//         const pairs = line.match(/(\d{2})/g);
+//         const filteredPairs = pairs.filter(
+//           (pair) => !(pair[0] == "0" && pair[1] == "0")
+//         );
+//         const resultStr = filteredPairs
+//           .map((pair) => pair[0] + "-" + pair[1])
+//           .join(",");
 
-        await insertScheduleWithResults(results);
-      })
-      .catch((error) => {
-        console.error(`Failed to parse PDF data:`, error);
-      });
-  }
+//         results.push({
+//           week: currentWeek,
+//           homePlayer: homePlayer,
+//           awayPlayer: awayPlayer,
+//           matchResult: resultStr,
+//           league: 6,
+//           deadline: calculateDeadline(currentWeek),
+//         });
+//       }
+//     }
 
-  res.json("success");
+//     return results;
+//   }
 
-  // Function to insert results into the schedule table
-  async function insertScheduleWithResults(parsedResults) {
-    for (const result of parsedResults) {
-      const { league, week, homePlayer, awayPlayer, sets, deadline } = result;
-      const resultStr = sets.join(",");
+//   const parsedResults = parseMatchData(data);
 
-      // Fetch league and season IDs
-      const leagueId = await getLeagueIdByName(league);
-      const seasonId = await getSeasonIdByName("2024");
+//   // Insert results into the database
+//   try {
+//     await insertScheduleWithResults(parsedResults);
+//     res.json({ message: "Success", results: parsedResults });
+//   } catch (error) {
+//     console.error("Failed to insert results:", error);
+//     res.status(500).json({ message: "Failed to insert results" });
+//   }
 
-      if (!leagueId || !seasonId) {
-        console.error(
-          `League or Season not found: League = ${league}, Season = 2024`
-        );
-        continue;
-      }
+//   // Function to insert results into the schedule table
+//   async function insertScheduleWithResults(parsedResults) {
+//     for (const result of parsedResults) {
+//       const { homePlayer, awayPlayer, matchResult, league, week, deadline } =
+//         result;
 
-      // Fetch player IDs from the players table
-      const homePlayerId = await getPlayerId(homePlayer);
-      const awayPlayerId = await getPlayerId(awayPlayer);
+//       // Fetch league and season IDs
+//       const leagueId = await getLeagueIdByName(league);
+//       const seasonId = await getSeasonIdByName("2024");
 
-      if (homePlayerId && awayPlayerId) {
-        // Insert players into player_season for the 2024 season and current league
-        await insertPlayerSeason(homePlayerId, leagueId, seasonId);
-        await insertPlayerSeason(awayPlayerId, leagueId, seasonId);
+//       if (!leagueId || !seasonId) {
+//         console.error(
+//           `League or Season not found: League = ${league}, Season = 2024`
+//         );
+//         continue;
+//       }
 
-        // Retrieve players_season IDs for the home and away players
-        const homePlayerSeasonId = await getPlayerSeasonId(
-          homePlayerId,
-          leagueId,
-          seasonId
-        );
-        const awayPlayerSeasonId = await getPlayerSeasonId(
-          awayPlayerId,
-          leagueId,
-          seasonId
-        );
+//       // Fetch player IDs from the players table
+//       const homePlayerId = await getPlayerId(homePlayer);
+//       const awayPlayerId = await getPlayerId(awayPlayer);
 
-        if (homePlayerSeasonId && awayPlayerSeasonId) {
-          // Insert match into schedule
-          const insertQuery = `
-                        INSERT INTO schedule (home_player, away_player, result, week, deadline)
-                        VALUES (?, ?, ?, ?, ?)
-                        ON DUPLICATE KEY UPDATE 
-                        result = CASE 
-                            WHEN result = 'No result' THEN VALUES(result) 
-                            ELSE result 
-                        END,  
-                        week = VALUES(week), 
-                        deadline = VALUES(deadline);`;
-          console.log(homePlayer, awayPlayer, resultStr);
-          const queryParams = [
-            homePlayerSeasonId,
-            awayPlayerSeasonId,
-            resultStr,
-            week,
-            deadline,
-          ];
-          console.log(queryParams);
-          try {
-            await new Promise((resolve, reject) => {
-              connection.query(insertQuery, queryParams, (err, results) => {
-                if (err) {
-                  reject(err);
-                } else {
-                  resolve(results);
-                }
-              });
-            });
-          } catch (error) {
-            console.error(
-              `Error inserting match for ${homePlayer} vs ${awayPlayer}:`,
-              error
-            );
-          }
-        } else {
-          console.error(
-            `PlayerSeason ID not found for ${homePlayer} or ${awayPlayer}`
-          );
-        }
-      } else {
-        console.error(`Player ID not found for ${homePlayer} or ${awayPlayer}`);
-      }
-    }
-  }
+//       if (homePlayerId && awayPlayerId) {
+//         // Insert players into player_season for the 2024 season and current league
+//         await insertPlayerSeason(homePlayerId, leagueId, seasonId);
+//         await insertPlayerSeason(awayPlayerId, leagueId, seasonId);
 
-  // Helper function to insert into player_season table
-  async function insertPlayerSeason(playerId, leagueId, seasonId) {
-    return new Promise((resolve, reject) => {
-      const insertQuery = `
-                INSERT INTO players_season (player_id, league_id, season_id)
-                VALUES (?, ?, ?)
-                ON DUPLICATE KEY UPDATE league_id = VALUES(league_id), season_id = VALUES(season_id);`;
+//         // Fetch players_season.id after inserting into players_season
+//         const homePlayerSeasonId = await getPlayerSeasonId(
+//           homePlayerId,
+//           leagueId,
+//           seasonId
+//         );
+//         const awayPlayerSeasonId = await getPlayerSeasonId(
+//           awayPlayerId,
+//           leagueId,
+//           seasonId
+//         );
 
-      connection.query(
-        insertQuery,
-        [playerId, leagueId, seasonId],
-        (err, results) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(results);
-          }
-        }
-      );
-    });
-  }
+//         // Insert match into schedule
+//         const insertQuery = `
+//                     INSERT INTO schedule (home_player, away_player, result, week, deadline)
+//                     VALUES (?, ?, ?, ?, ?)
+//                     ON DUPLICATE KEY UPDATE 
+//                     result = CASE 
+//                         WHEN result = 'No result' THEN VALUES(result) 
+//                         ELSE result 
+//                     END,  
+//                     week = VALUES(week), 
+//                     deadline = VALUES(deadline);`;
 
-  // Helper function to get player_season.id
-  async function getPlayerSeasonId(playerId, leagueId, seasonId) {
-    return new Promise((resolve, reject) => {
-      const query = `
-                SELECT id 
-                FROM players_season 
-                WHERE player_id = ? AND league_id = ? AND season_id = ?;`;
+//         const queryParams = [
+//           homePlayerSeasonId,
+//           awayPlayerSeasonId,
+//           matchResult,
+//           week,
+//           deadline,
+//         ];
 
-      connection.query(
-        query,
-        [playerId, leagueId, seasonId],
-        (err, results) => {
-          if (err) {
-            reject(err);
-          } else if (results.length > 0) {
-            resolve(results[0].id); // Return players_season.id
-          } else {
-            resolve(null); // No matching record found
-          }
-        }
-      );
-    });
-  }
+//         try {
+//           await new Promise((resolve, reject) => {
+//             connection.query(insertQuery, queryParams, (err, results) => {
+//               if (err) {
+//                 reject(err);
+//               } else {
+//                 resolve(results);
+//               }
+//             });
+//           });
+//         } catch (error) {
+//           console.error(
+//             `Error inserting match for ${homePlayer} vs ${awayPlayer}:`,
+//             error
+//           );
+//         }
+//       } else {
+//         console.error(`Player ID not found for ${homePlayer} or ${awayPlayer}`);
+//       }
+//     }
+//   }
 
-  // Helper function to get or insert a player and return the player ID
-  async function getPlayerId(playerName) {
-    return new Promise((resolve, reject) => {
-      let reversedName = playerName.split(" ").reverse().join(" ");
+//   // Helper function to get player ID from the database
+//   async function getPlayerId(playerName) {
+//     return new Promise((resolve, reject) => {
+//       let reversedName = playerName.split(" ").reverse().join(" ");
 
-      // Check if the player exists
-      const selectQuery = "SELECT id FROM players WHERE name=? OR name=?";
-      connection.query(
-        selectQuery,
-        [playerName, reversedName],
-        (err, results) => {
-          if (err) {
-            return reject(err);
-          }
+//       const query = `SELECT id FROM players WHERE name=? OR name=?;`;
+//       connection.query(query, [playerName, reversedName], (err, results) => {
+//         if (err) {
+//           reject(err);
+//         } else if (results.length > 0) {
+//           resolve(results[0].id);
+//         } else {
+//           resolve(null); // Player not found
+//         }
+//       });
+//     });
+//   }
 
-          if (results.length > 0) {
-            // Player exists
-            return resolve(results[0].id);
-          }
+//   // Helper function to insert player into player_season table
+//   async function insertPlayerSeason(playerId, leagueId, seasonId) {
+//     const insertQuery = `
+//             INSERT INTO players_season (player_id, league_id, season_id)
+//             VALUES (?, ?, ?)
+//             ON DUPLICATE KEY UPDATE league_id = VALUES(league_id), season_id = VALUES(season_id);`;
 
-          // Player does not exist, insert into database
-          const insertQuery = "INSERT INTO players (name) VALUES (?)";
-          connection.query(insertQuery, [playerName], (err, insertResults) => {
-            if (err) {
-              return reject(err);
-            }
+//     const queryParams = [playerId, leagueId, seasonId];
 
-            // Return the ID of the newly inserted player
-            resolve(insertResults.insertId);
-          });
-        }
-      );
-    });
-  }
+//     return new Promise((resolve, reject) => {
+//       connection.query(insertQuery, queryParams, (err, results) => {
+//         if (err) {
+//           reject(err);
+//         } else {
+//           resolve(results);
+//         }
+//       });
+//     });
+//   }
 
-  // Function to insert players into player_season
-  async function insertPlayerSeason(playerId, leagueId, seasonId) {
-    return new Promise((resolve, reject) => {
-      // First, check if the player is already in the player_season table
-      const selectQuery = `SELECT id FROM players_season WHERE player_id=? AND league_id=? AND season_id=?;`;
+//   // Helper function to get players_season.id after inserting the player
+//   async function getPlayerSeasonId(playerId, leagueId, seasonId) {
+//     return new Promise((resolve, reject) => {
+//       const query = `SELECT id FROM players_season WHERE player_id=? AND league_id=? AND season_id=?;`;
+//       connection.query(
+//         query,
+//         [playerId, leagueId, seasonId],
+//         (err, results) => {
+//           if (err) {
+//             reject(err);
+//           } else if (results.length > 0) {
+//             resolve(results[0].id);
+//           } else {
+//             resolve(null); // Player in the season not found
+//           }
+//         }
+//       );
+//     });
+//   }
 
-      connection.query(
-        selectQuery,
-        [playerId, leagueId, seasonId],
-        (err, results) => {
-          if (err) {
-            reject(err);
-          } else if (results.length > 0) {
-            resolve(); // Player already in player_season
-          } else {
-            // Insert the player into the player_season table
-            const insertQuery = `INSERT INTO players_season (player_id, league_id, season_id, promotion_status) VALUES (?, ?, ?, 'active');`;
-            connection.query(
-              insertQuery,
-              [playerId, leagueId, seasonId],
-              (err, results) => {
-                if (err) {
-                  reject(err);
-                } else {
-                  resolve(results);
-                }
-              }
-            );
-          }
-        }
-      );
-    });
-  }
+//   // Helper function to get league ID by its name
+//   async function getLeagueIdByName(leagueName) {
+//     return new Promise((resolve, reject) => {
+//       const query = `SELECT id FROM leagues WHERE id=?;`;
+//       connection.query(query, [leagueName], (err, results) => {
+//         if (err) {
+//           reject(err);
+//         } else if (results.length > 0) {
+//           resolve(results[0].id);
+//         } else {
+//           resolve(null); // League not found
+//         }
+//       });
+//     });
+//   }
 
-  // Helper function to get league ID by league name
-  async function getLeagueIdByName(leagueName) {
-    return new Promise((resolve, reject) => {
-      const query = `SELECT id FROM leagues WHERE name=?;`;
-      connection.query(query, [leagueName], (err, results) => {
-        if (err) {
-          reject(err);
-        } else if (results.length > 0) {
-          resolve(results[0].id);
-        } else {
-          resolve(null); // League not found
-        }
-      });
-    });
-  }
+//   // Helper function to get season ID by its name
+//   async function getSeasonIdByName(seasonName) {
+//     return new Promise((resolve, reject) => {
+//       const query = `SELECT id FROM season WHERE year=?;`;
+//       connection.query(query, [seasonName], (err, results) => {
+//         if (err) {
+//           reject(err);
+//         } else if (results.length > 0) {
+//           resolve(results[0].id);
+//         } else {
+//           resolve(null); // Season not found
+//         }
+//       });
+//     });
+//   }
 
-  // Helper function to get season ID by season name
-  async function getSeasonIdByName(seasonName) {
-    return new Promise((resolve, reject) => {
-      const query = `SELECT id FROM season WHERE year=?;`;
-      connection.query(query, [seasonName], (err, results) => {
-        if (err) {
-          reject(err);
-        } else if (results.length > 0) {
-          resolve(results[0].id);
-        } else {
-          resolve(null); // Season not found
-        }
-      });
-    });
-  }
-});
-
-app.get("/parsepdfzenske", async (req, res) => {
-  const url =
-    "http://www.tenis-radgona.si/images/stories/liga_2024/rezultati_ženske_2023.pdf";
-  let dataBuffer = "";
-
-  // Reading PDF file from local path
-  dataBuffer = fs.readFileSync(
-    "../../../../../../Users/zan_s/Desktop/rezultati lige/rezultati_ženske_2024.pdf"
-  );
-
-  // Parse PDF data
-  let data;
-  try {
-    data = await pdfparse(dataBuffer);
-  } catch (error) {
-    console.error("Failed to parse PDF data:", error);
-    res.status(500).json({ message: "Failed to parse PDF data" });
-    return;
-  }
-
-  function parseMatchData(data) {
-    const lines = data["text"].split("\n").filter((line) => line.trim() !== "");
-
-    const results = [];
-    let currentWeek = "";
-    let homePlayer, awayPlayer;
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-
-      // Match the week line
-      const weekMatch = line.match(/^(\d+\.?\s*kolo)/);
-      if (weekMatch) {
-        currentWeek = weekMatch[1].match(/\d+/)[0];
-        continue;
-      }
-
-      // Skip the 'rezultat' line
-      if (line.includes(":")) {
-        [homePlayer, awayPlayer] = line.split(":").map((str) => str.trim());
-        continue;
-      }
-
-      // Handle match results
-      if (line == "000000") {
-        results.push({
-          week: currentWeek,
-          homePlayer: homePlayer,
-          awayPlayer: awayPlayer,
-          matchResult: "No result",
-          league: 6, // Assuming league 6 for women's league
-          deadline: calculateDeadline(currentWeek),
-        });
-      } else if (!isNaN(line)) {
-        const pairs = line.match(/(\d{2})/g);
-        const filteredPairs = pairs.filter(
-          (pair) => !(pair[0] == "0" && pair[1] == "0")
-        );
-        const resultStr = filteredPairs
-          .map((pair) => pair[0] + "-" + pair[1])
-          .join(",");
-
-        results.push({
-          week: currentWeek,
-          homePlayer: homePlayer,
-          awayPlayer: awayPlayer,
-          matchResult: resultStr,
-          league: 6,
-          deadline: calculateDeadline(currentWeek),
-        });
-      }
-    }
-
-    return results;
-  }
-
-  const parsedResults = parseMatchData(data);
-
-  // Insert results into the database
-  try {
-    await insertScheduleWithResults(parsedResults);
-    res.json({ message: "Success", results: parsedResults });
-  } catch (error) {
-    console.error("Failed to insert results:", error);
-    res.status(500).json({ message: "Failed to insert results" });
-  }
-
-  // Function to insert results into the schedule table
-  async function insertScheduleWithResults(parsedResults) {
-    for (const result of parsedResults) {
-      const { homePlayer, awayPlayer, matchResult, league, week, deadline } =
-        result;
-
-      // Fetch league and season IDs
-      const leagueId = await getLeagueIdByName(league);
-      const seasonId = await getSeasonIdByName("2024");
-
-      if (!leagueId || !seasonId) {
-        console.error(
-          `League or Season not found: League = ${league}, Season = 2024`
-        );
-        continue;
-      }
-
-      // Fetch player IDs from the players table
-      const homePlayerId = await getPlayerId(homePlayer);
-      const awayPlayerId = await getPlayerId(awayPlayer);
-
-      if (homePlayerId && awayPlayerId) {
-        // Insert players into player_season for the 2024 season and current league
-        await insertPlayerSeason(homePlayerId, leagueId, seasonId);
-        await insertPlayerSeason(awayPlayerId, leagueId, seasonId);
-
-        // Fetch players_season.id after inserting into players_season
-        const homePlayerSeasonId = await getPlayerSeasonId(
-          homePlayerId,
-          leagueId,
-          seasonId
-        );
-        const awayPlayerSeasonId = await getPlayerSeasonId(
-          awayPlayerId,
-          leagueId,
-          seasonId
-        );
-
-        // Insert match into schedule
-        const insertQuery = `
-                    INSERT INTO schedule (home_player, away_player, result, week, deadline)
-                    VALUES (?, ?, ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE 
-                    result = CASE 
-                        WHEN result = 'No result' THEN VALUES(result) 
-                        ELSE result 
-                    END,  
-                    week = VALUES(week), 
-                    deadline = VALUES(deadline);`;
-
-        const queryParams = [
-          homePlayerSeasonId,
-          awayPlayerSeasonId,
-          matchResult,
-          week,
-          deadline,
-        ];
-
-        try {
-          await new Promise((resolve, reject) => {
-            connection.query(insertQuery, queryParams, (err, results) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve(results);
-              }
-            });
-          });
-        } catch (error) {
-          console.error(
-            `Error inserting match for ${homePlayer} vs ${awayPlayer}:`,
-            error
-          );
-        }
-      } else {
-        console.error(`Player ID not found for ${homePlayer} or ${awayPlayer}`);
-      }
-    }
-  }
-
-  // Helper function to get player ID from the database
-  async function getPlayerId(playerName) {
-    return new Promise((resolve, reject) => {
-      let reversedName = playerName.split(" ").reverse().join(" ");
-
-      const query = `SELECT id FROM players WHERE name=? OR name=?;`;
-      connection.query(query, [playerName, reversedName], (err, results) => {
-        if (err) {
-          reject(err);
-        } else if (results.length > 0) {
-          resolve(results[0].id);
-        } else {
-          resolve(null); // Player not found
-        }
-      });
-    });
-  }
-
-  // Helper function to insert player into player_season table
-  async function insertPlayerSeason(playerId, leagueId, seasonId) {
-    const insertQuery = `
-            INSERT INTO players_season (player_id, league_id, season_id)
-            VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE league_id = VALUES(league_id), season_id = VALUES(season_id);`;
-
-    const queryParams = [playerId, leagueId, seasonId];
-
-    return new Promise((resolve, reject) => {
-      connection.query(insertQuery, queryParams, (err, results) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(results);
-        }
-      });
-    });
-  }
-
-  // Helper function to get players_season.id after inserting the player
-  async function getPlayerSeasonId(playerId, leagueId, seasonId) {
-    return new Promise((resolve, reject) => {
-      const query = `SELECT id FROM players_season WHERE player_id=? AND league_id=? AND season_id=?;`;
-      connection.query(
-        query,
-        [playerId, leagueId, seasonId],
-        (err, results) => {
-          if (err) {
-            reject(err);
-          } else if (results.length > 0) {
-            resolve(results[0].id);
-          } else {
-            resolve(null); // Player in the season not found
-          }
-        }
-      );
-    });
-  }
-
-  // Helper function to get league ID by its name
-  async function getLeagueIdByName(leagueName) {
-    return new Promise((resolve, reject) => {
-      const query = `SELECT id FROM leagues WHERE id=?;`;
-      connection.query(query, [leagueName], (err, results) => {
-        if (err) {
-          reject(err);
-        } else if (results.length > 0) {
-          resolve(results[0].id);
-        } else {
-          resolve(null); // League not found
-        }
-      });
-    });
-  }
-
-  // Helper function to get season ID by its name
-  async function getSeasonIdByName(seasonName) {
-    return new Promise((resolve, reject) => {
-      const query = `SELECT id FROM season WHERE year=?;`;
-      connection.query(query, [seasonName], (err, results) => {
-        if (err) {
-          reject(err);
-        } else if (results.length > 0) {
-          resolve(results[0].id);
-        } else {
-          resolve(null); // Season not found
-        }
-      });
-    });
-  }
-
-  // Helper function to calculate deadlines based on the week
-  function calculateDeadline(week) {
-    // Logic to calculate the deadline for the match week
-    const startDate = new Date(2024, 0, 1); // Assuming season starts in January 2024
-    const deadlineDate = new Date(
-      startDate.getTime() + week * 7 * 24 * 60 * 60 * 1000
-    ); // Add week number
-    return deadlineDate.toISOString().split("T")[0]; // Format as YYYY-MM-DD
-  }
-});
+//   // Helper function to calculate deadlines based on the week
+//   function calculateDeadline(week) {
+//     // Logic to calculate the deadline for the match week
+//     const startDate = new Date(2024, 0, 1); // Assuming season starts in January 2024
+//     const deadlineDate = new Date(
+//       startDate.getTime() + week * 7 * 24 * 60 * 60 * 1000
+//     ); // Add week number
+//     return deadlineDate.toISOString().split("T")[0]; // Format as YYYY-MM-DD
+//   }
+// });
 
 app.get("/getmatches/:leagueId", (req, res) => {
   const leagueId = req.params.leagueId;
   const seasonId = req.headers.season;
-  console.log(leagueId, seasonId);
+
 
   const query = `
      SELECT 
@@ -939,67 +598,67 @@ ORDER BY
   });
 });
 // Route to generate and store the round-robin schedule
-app.post("/generate-schedule", (req, res) => {
-  const { liga, season } = req.body;
-  console.log(req.body)
-  // Fetch player IDs
-  connection.query(
-    "SELECT * FROM players_season WHERE league_id=? and season_id=?",[liga,season], (err, data) => {
-      if (err) {
-        console.error("Error fetching players:", err);
-        res
-          .status(500)
-          .json({ error: "An error occurred while fetching players" });
-        return;
-      }
+// app.post("/generate-schedule",verifyToken("admin"), (req, res) => {
+//   const { liga, season } = req.body;
+//   console.log(req.body)
+//   // Fetch player IDs
+//   connection.query(
+//     "SELECT * FROM players_season WHERE league_id=? and season_id=?",[liga,season], (err, data) => {
+//       if (err) {
+//         console.error("Error fetching players:", err);
+//         res
+//           .status(500)
+//           .json({ error: "An error occurred while fetching players" });
+//         return;
+//       }
 
-      // Extract player IDs from the query result
-      const playerIds = data.map((row) => row.id);
-      const playerNameMap = new Map(data.map((row) => [row.id, row.name])); // Map IDs to names for reference
+//       // Extract player IDs from the query result
+//       const playerIds = data.map((row) => row.id);
+//       const playerNameMap = new Map(data.map((row) => [row.id, row.name])); // Map IDs to names for reference
 
-      console.log(playerIds);
+//       console.log(playerIds);
 
-      const shuffledPlayerIds = shuffle(playerIds);
-      console.log(shuffledPlayerIds)
-      const schedule = generateRoundRobinSchedule(shuffledPlayerIds);
-      const alternatedSchedule = schedule;
-      console.log(schedule.length)
-      //Insert schedule into the database
-      for (let week = 0; week < alternatedSchedule.length; week++) {
-        const roundData = alternatedSchedule[week]; // Get the data for the current round
-        const round = roundData.round;
-        const match = roundData.match;
-        const homePlayerId = roundData.player1;  // Home player (player1)
-        const awayPlayerId = roundData.player2;  // Away player (player2)
-        console.log(homePlayerId)
-        // Now insert this match into your database
-        const query = "INSERT INTO schedule (week, home_player, away_player, deadline) VALUES (?, ?, ?, ?)";
+//       const shuffledPlayerIds = shuffle(playerIds);
+//       console.log(shuffledPlayerIds)
+//       const schedule = generateRoundRobinSchedule(shuffledPlayerIds);
+//       const alternatedSchedule = schedule;
+//       console.log(schedule.length)
+//       //Insert schedule into the database
+//       for (let week = 0; week < alternatedSchedule.length; week++) {
+//         const roundData = alternatedSchedule[week]; // Get the data for the current round
+//         const round = roundData.round;
+//         const match = roundData.match;
+//         const homePlayerId = roundData.player1;  // Home player (player1)
+//         const awayPlayerId = roundData.player2;  // Away player (player2)
+//         console.log(homePlayerId)
+//         // Now insert this match into your database
+//         const query = "INSERT INTO schedule (week, home_player, away_player, deadline) VALUES (?, ?, ?, ?)";
         
-        connection.query(
-            query,
-            [
-                round,  // The current round number (week)
-                homePlayerId,  // Home player ID
-                awayPlayerId,  // Away player ID
-                calculateDeadline(round),  // A function that calculates the deadline for this round
-            ],
-            (err, results) => {
-                if (err) {
-                    console.error("Error inserting match:", err);
-                } else {
-                    console.log("Inserted match:", results.insertId);
-                }
-            }
-        );
+//         connection.query(
+//             query,
+//             [
+//                 round,  // The current round number (week)
+//                 homePlayerId,  // Home player ID
+//                 awayPlayerId,  // Away player ID
+//                 calculateDeadline(round),  // A function that calculates the deadline for this round
+//             ],
+//             (err, results) => {
+//                 if (err) {
+//                     console.error("Error inserting match:", err);
+//                 } else {
+//                     console.log("Inserted match:", results.insertId);
+//                 }
+//             }
+//         );
     
         
-       }
+//        }
 
-      res.json({ message: "Schedule generated and stored in the database." });
-    }
-  );
-});
-app.post("/generate-schedule2",async (req, res) => {
+//       res.json({ message: "Schedule generated and stored in the database." });
+//     }
+//   );
+// });
+app.post("/generate-schedule2",verifyToken("admin"),async (req, res) => {
   const { player_Ids, season } = req.body;
   console.log(req.body)
   // Fetch player IDs
@@ -1569,7 +1228,7 @@ app.get("/standings/:id", (req, res) => {
   });
 });
 
-app.post("/update-match-result", (req, res) => {
+app.post("/update-match-result",verifyToken("user"), (req, res) => {
   const { id, result } = req.body;
   
   const query = "UPDATE schedule SET result = ? WHERE id = ? and result_confirmed=0";
@@ -1624,7 +1283,7 @@ app.post("/ifalreadyinleague", (req, res) => {
   });
 });
 
-app.post("/promote", (req, res) => {
+app.post("/promote",verifyToken("admin"), (req, res) => {
   const { id, status,seasonid } = req.body;
   const query = "UPDATE players_season SET promotion_status = ? WHERE id = ? and season_id=?";
 
@@ -1640,7 +1299,7 @@ app.post("/promote", (req, res) => {
     res.status(200).json({ message: "Match result updated successfully" });
   });
 });
-app.post("/applypenalty", (req, res) => {
+app.post("/applypenalty",verifyToken("admin"), (req, res) => {
   const { id, matchid } = req.body;
   const query = "UPDATE schedule SET penalty = ? WHERE id = ?";
 
@@ -1656,8 +1315,9 @@ app.post("/applypenalty", (req, res) => {
     res.status(200).json({ message: "Match result updated successfully" });
   });
 });
-app.post("/changePlayerLeague", (req, res) => {
+app.post("/changePlayerLeague",verifyToken("admin"), (req, res) => {
   const { id, newleagueid } = req.body;
+  console.log(id,newleagueid)
   const query = "UPDATE players_season SET league_id = ? WHERE id = ?";
 
   connection.query(query, [newleagueid,id], (err, results) => {
@@ -1668,11 +1328,12 @@ app.post("/changePlayerLeague", (req, res) => {
         .json({ error: "An error occurred while updating match result" });
       return;
     }
+    
     console.log(results)
     res.status(200).json({ message: "Uspešno spremenjena liga igralca" });
   });
 });
-app.post("/removePlayer", (req, res) => {
+app.post("/removePlayer",verifyToken("admin"), (req, res) => {
   const { id } = req.body;
   const query = "DELETE FROM players_season WHERE id = ?";
 
@@ -1688,25 +1349,25 @@ app.post("/removePlayer", (req, res) => {
     res.status(200).json({ message: "Igralec uspešno odstranjen!" });
   });
 });
-app.post("/removeAllMatches", (req, res) => {
-  const { id} = req.body;
-  const {season} =req.headers
+// app.post("/removeAllMatches",verifyToken("admin"), (req, res) => {
+//   const { id} = req.body;
+//   const {season} =req.headers
  
-  const query = "DELETE schedule FROM schedule LEFT JOIN players_season on players_season.id=schedule.home_player WHERE schedule.result='no result' and players_season.season_id=? and players_season.league_id=?";
+//   const query = "DELETE schedule FROM schedule LEFT JOIN players_season on players_season.id=schedule.home_player WHERE schedule.result='no result' and players_season.season_id=? and players_season.league_id=?";
 
-  connection.query(query, [season,id], (err, results) => {
-    if (err) {
-      console.error("Error updating match result:", err);
-      res
-        .status(500)
-        .json({ error: "An error occurred while updating match result" });
-      return;
-    }
-    console.log(results)
-    res.status(200).json({ message: "Igralec uspešno odstranjen!" });
-  });
-});
-app.post("/demote", (req, res) => {
+//   connection.query(query, [season,id], (err, results) => {
+//     if (err) {
+//       console.error("Error updating match result:", err);
+//       res
+//         .status(500)
+//         .json({ error: "An error occurred while updating match result" });
+//       return;
+//     }
+//     console.log(results)
+//     res.status(200).json({ message: "Igralec uspešno odstranjen!" });
+//   });
+// });
+app.post("/demote",verifyToken("admin"), (req, res) => {
   const { id, status,seasonid } = req.body;
   const query = "UPDATE players_season SET promotion_status = ? WHERE id = ? and season_id=?";
 
@@ -1722,7 +1383,7 @@ app.post("/demote", (req, res) => {
     res.status(200).json({ message: "Match result updated successfully" });
   });
 });
-app.post("/fetchpromotedanddemoted", (req, res) => {
+app.post("/fetchpromotedanddemoted",verifyToken("admin"), (req, res) => {
   season_id=req.body.seasonid
   const sql = `
     WITH TopPlayers AS (
@@ -1764,7 +1425,7 @@ app.post("/fetchpromotedanddemoted", (req, res) => {
   });
 });
 
-app.post("/endLeague", (req, res) => {
+app.post("/endLeague",verifyToken("admin"), (req, res) => {
   // const { id, result } = req.body;
   const query = 'UPDATE season SET status = "finished" WHERE year="2024"';
 
@@ -1780,7 +1441,7 @@ app.post("/endLeague", (req, res) => {
     res.json({ message: "Match result updated successfully" });
   });
 });
-app.post("/lockstandings", (req, res) => {
+app.post("/lockstandings",verifyToken("admin"), (req, res) => {
   season=req.body.seasonid
   
   const query = 'UPDATE season SET standings_status = "locked" WHERE id=?';
@@ -1797,7 +1458,7 @@ app.post("/lockstandings", (req, res) => {
     res.json({ message: "Match result updated successfully" });
   });
 });
-app.post("/checkstatus", (req, res) => {
+app.post("/checkstatus",verifyToken("admin"), (req, res) => {
   season=req.body.seasonid
   
   const query = 'SELECT * FROM season WHERE id=?';
@@ -1838,7 +1499,7 @@ app.get("/leagues", (req, res) => {
     res.json(results);
   });
 });
-app.post("/confirmResult", (req, res) => {
+app.post("/confirmResult",verifyToken("user"), (req, res) => {
   const { id } = req.body;
   const query = "UPDATE schedule SET result_confirmed = 1 WHERE id = ?";
   connection.query(query, [id], (err, results) => {
@@ -1852,8 +1513,8 @@ app.post("/confirmResult", (req, res) => {
 
     res.json({ message: "Rezultat je bil uspeĹˇno potrjen" });
   });
-});
-app.post("/forfeitMatch", (req, res) => {
+});//add check if  the player is correct
+app.post("/forfeitMatch",verifyToken("user") ,(req, res) => {
   const { id, result } = req.body;
   const query =
     "UPDATE schedule SET result_confirmed = 1,result=? WHERE id = ?";
@@ -1868,12 +1529,12 @@ app.post("/forfeitMatch", (req, res) => {
 
     res.json({ message: "Tekma je bila predana" });
   });
-});
+});//check if player is correct
 app.get("/leagues/:id/players", (req, res) => {
   const leagueId = req.params.id;
   const seasonId = req.headers.season;
   const query = `
-      SELECT p.*, ps.* 
+      SELECT  p.name,ps.id
       FROM players p
       JOIN players_season ps ON p.id = ps.player_id
       WHERE ps.league_id = ? and ps.season_id = ?
@@ -1937,7 +1598,7 @@ ORDER BY
     res.json(data);
   });
 });
-app.get("/getplayers", (req, res) => {
+app.get("/getplayers",verifyToken("admin"), (req, res) => {
   const leagueId = req.params.id;
   const query = "SELECT * FROM players    ";
 
@@ -1952,7 +1613,7 @@ app.get("/getplayers", (req, res) => {
     res.json(results);
   });
 });
-app.get("/getUsers", (req, res) => {
+app.get("/getUsers",verifyToken("admin"), (req, res) => {
   const leagueId = req.params.id;
   const query = `
     SELECT u.*,u.id, u.name, p.id AS playerId
@@ -2083,7 +1744,7 @@ app.post("/login", (req, res) => {
           name: results[0].name,
           id: results[0].id,
         },
-        "secret",
+        process.env.secret,
         { expiresIn: "24h" }
       );
        sendEmail();
@@ -2313,7 +1974,7 @@ console.log(req.body)
     }
   });
 });
-app.post("/registerForLeagueRegisteredPlayers", (req, res) => {
+app.post("/registerForLeagueRegisteredPlayers",verifyToken("user"), (req, res) => {
   const userId = req.body.id; // We assume userId is passed directly
   const name=req.body.form.fullName
   const email=req.body.form.email

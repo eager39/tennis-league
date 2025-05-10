@@ -1,4 +1,6 @@
 const jwt = require('jsonwebtoken');
+const dotenv=require("dotenv")
+dotenv.config();
 
 function verifyToken(requiredRole) {
     return (req, res, next) => {
@@ -11,7 +13,7 @@ function verifyToken(requiredRole) {
         if (!token) return res.status(401).json({ error: 'Access denied' });
 
         try {
-            const decoded = jwt.verify(token, 'secret');
+            const decoded = jwt.verify(token, process.env.secret);
             req.userId = decoded.userId;
             req.role = decoded.role;
 
