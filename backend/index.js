@@ -6,9 +6,9 @@ const https = require("https");
 const nodemailer = require('nodemailer');
 const Mailgen = require('mailgen');
 const options = {
-  key: fs.readFileSync("cert/key.pem"), //Change Private Key Path here
-  cert: fs.readFileSync("cert/certificate.pem"), //Change Main Certificate Path here
-  //Change Intermediate Certificate Path here
+  key: fs.readFileSync("cert/key.pem"), 
+  cert: fs.readFileSync("cert/certificate.pem"), 
+
 };
 // To enable HTTPS
 //var app = module.exports = express({key: privateKey, cert: certificate});
@@ -22,7 +22,7 @@ const pdfparse = require("pdf-parse");
 
 const axios = require("axios");
 const path = require("path");
-const moment = require("moment"); // Use moment.js for date manipulation
+const moment = require("moment"); 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { match } = require("assert");
@@ -33,10 +33,10 @@ var getIP = require("ipware")().get_ip;
 app.use(function (req, res, next) {
   var ipInfo = getIP(req);
   console.log(ipInfo);
-  // { clientIp: '127.0.0.1', clientIpRoutable: false }
+  
   next();
 });
-// Create MySQL connection
+
 const connection = mysql.createPool({
   host: 'localhost',
   user: process.env.DBuser,
@@ -1349,24 +1349,24 @@ app.post("/removePlayer",verifyToken("admin"), (req, res) => {
     res.status(200).json({ message: "Igralec uspešno odstranjen!" });
   });
 });
-// app.post("/removeAllMatches",verifyToken("admin"), (req, res) => {
-//   const { id} = req.body;
-//   const {season} =req.headers
+app.post("/removeAllMatches",verifyToken("admin"), (req, res) => {
+  const { id} = req.body;
+  const {season} =req.headers
  
-//   const query = "DELETE schedule FROM schedule LEFT JOIN players_season on players_season.id=schedule.home_player WHERE schedule.result='no result' and players_season.season_id=? and players_season.league_id=?";
+  const query = "DELETE schedule FROM schedule LEFT JOIN players_season on players_season.id=schedule.home_player WHERE schedule.result='no result' and players_season.season_id=? and players_season.league_id=?";
 
-//   connection.query(query, [season,id], (err, results) => {
-//     if (err) {
-//       console.error("Error updating match result:", err);
-//       res
-//         .status(500)
-//         .json({ error: "An error occurred while updating match result" });
-//       return;
-//     }
-//     console.log(results)
-//     res.status(200).json({ message: "Igralec uspešno odstranjen!" });
-//   });
-// });
+  connection.query(query, [season,id], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+    console.log(results)
+    res.status(200).json({ message: "Igralec uspešno odstranjen!" });
+  });
+});
 app.post("/demote",verifyToken("admin"), (req, res) => {
   const { id, status,seasonid } = req.body;
   const query = "UPDATE players_season SET promotion_status = ? WHERE id = ? and season_id=?";
@@ -1534,7 +1534,7 @@ app.get("/leagues/:id/players", (req, res) => {
   const leagueId = req.params.id;
   const seasonId = req.headers.season;
   const query = `
-      SELECT  p.name,ps.id
+      SELECT  p.name,ps.id,ps.player_id
       FROM players p
       JOIN players_season ps ON p.id = ps.player_id
       WHERE ps.league_id = ? and ps.season_id = ?
@@ -2108,7 +2108,7 @@ function registerPlayerForLeague(playerId, seasonId, res,gender) {
 }
 
 app.get("/getTiedPlayers",verifyToken("admin"), (req, res) => {
-
+let season=req.headers.season
   // SQL query to retrieve players with tied points
   let query = `
     SELECT 
@@ -2147,13 +2147,13 @@ app.get("/getTiedPlayers",verifyToken("admin"), (req, res) => {
            AND ps.season_id = s2.season_id 
            AND s1.points = s2.points
     WHERE 
-        ps.season_id = 1  -- Replace with your season filter
+        ps.season_id = ?  -- Replace with your season filter
     ORDER BY 
         ps.league_id ASC , s1.position ASC;
   `;
 
   // Execute the query
-  connection.query(query, (err, results) => {
+  connection.query(query,[season], (err, results) => {
     if (err) {
       console.error('Error executing query:', err);
       res.status(500).json({ error: 'Database query error' });
@@ -2166,6 +2166,3 @@ app.get("/getTiedPlayers",verifyToken("admin"), (req, res) => {
 });
   
 
-// app.listen(port, () => {
-//     console.log(`Server is running at https://192.168.0.24:${port}`);
-// });

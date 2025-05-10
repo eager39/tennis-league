@@ -29,8 +29,8 @@ seasons :any[]=[]
 
   onSeasonChange(season: number) {
     const currentUrl = this.router.url;
-    this.router.navigateByUrl('/', { skipLocationChange: true }).then(() => {
-      this.router.navigate([currentUrl]);
+    this.router.navigateByUrl('', { skipLocationChange: false }).then(() => {
+      this.router.navigate([""]);
     })
     this.seasonService.setSeason(season);
   }

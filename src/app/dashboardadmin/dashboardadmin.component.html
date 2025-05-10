@@ -1,14 +1,14 @@
 <div >
-  <label for="playerFilter">Filter by Player:</label>
+  <label for="playerFilter">Igralec:</label>
   <mat-form-field appearance="fill">
-    <mat-label>Select Player</mat-label>
+    <mat-label>Izberi igralca</mat-label>
     <mat-select id="playerFilter" [(ngModel)]="selectedPlayer" (ngModelChange)="filterMatches()">
-      <mat-option value="">All Players</mat-option>
+      <mat-option value="">Vsi igralci</mat-option>
       <mat-option *ngFor="let player of players" [value]="player">{{ player }}</mat-option>
     </mat-select>
   </mat-form-field>
 
-  <label for="weekFilter">Filter by Week:</label>
+  <label for="weekFilter">Teden:</label>
   <mat-form-field appearance="fill">
     <mat-label>Select Week</mat-label>
     <mat-select id="weekFilter" [(ngModel)]="selectedWeek" (ngModelChange)="filterMatches()">

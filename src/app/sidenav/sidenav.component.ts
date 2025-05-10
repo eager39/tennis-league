@@ -27,12 +27,17 @@ import { leagues, TennisMatch } from '../tennismatch.model';
 })
 export class SidenavComponent {
   leagues: leagues[]=[];
+  seasons:any
+  currentseason:any
+  filteredSeasons: any[] = [];
   constructor(public authService: AuthService,private leagueService: LeaguesService,private seasonService: SeasonService) { }
   
   ngOnInit(): void {
  this.fetchLeagues();
  this.seasonService.currentSeason$.subscribe((seasonId: any) => {
-  this.fetchLeagues()
+ this.currentseason=seasonId
+ this.getSeasonInfo()
+
 });
 }
 isInApril(): boolean {
@@ -53,5 +58,14 @@ fetchLeagues(): void {
     },
   });
 }
+getSeasonInfo(){
+  this.seasonService.getSeasons().subscribe(data=>{
+      this.seasons=data
+     this.filteredSeasons = this.seasons.filter(
+        (season: { id: any }) => season.id === this.currentseason
+      );
+    console.log(this.filteredSeasons)
+})}
+ 
   
 }

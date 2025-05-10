@@ -23,6 +23,7 @@ import { SeasonService } from '../season.service';
 })
 export class DashboardadminComponent {
   matches: TennisMatch[] = [];
+  matches_const: TennisMatch[]=[]
   dataSource = new MatTableDataSource<TennisMatch>();
   dataSource2 = new MatTableDataSource<any[]>();
   dataSource3 = new MatTableDataSource<any[]>();
@@ -115,7 +116,7 @@ loadMatches(): void {
       (data) => {
         this.matches = data;
         this.dataSource.data = data;
-       
+       this.matches_const=data
         this.extractPlayersAndWeeks(data);
         this.filterMatches();
         this.matchesleft=this.matches.length
@@ -128,8 +129,8 @@ loadMatches(): void {
   }
 }
 extractPlayersAndWeeks(matches: TennisMatch[]): void {
-  this.players = Array.from(new Set(matches.flatMap(match => [match.home_player, match.away_player])));
-  this.weeks = Array.from(new Set(matches.map(match => match.week)));
+  this.players = Array.from(new Set(this.matches_const.flatMap(match => [match.home_player, match.away_player])));
+  this.weeks = Array.from(new Set(this.matches_const.map(match => match.week)));
 }
 onLeagueChange(): void {
   if (this.selectedLeagueId) {
