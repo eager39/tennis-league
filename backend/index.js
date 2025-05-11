@@ -27,6 +27,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { match } = require("assert");
 const { start } = require("repl");
+const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const fontkit = require('fontkit'); //
 app.use(cors());
 app.use(bodyParser.json());
 var getIP = require("ipware")().get_ip;
@@ -60,6 +62,299 @@ function shuffle(array) {
   return array;
 }
 
+// async function generatePdf(dataSource, logoPath, option = 'matches') {
+//   const pdfDoc = await PDFDocument.create();
+//   const page = pdfDoc.addPage([595, 842]); // A4
+//   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+//   const logoBytes = fs.readFileSync(logoPath);
+//   const logoImage = await pdfDoc.embedPng(logoBytes);
+//   const pageHeight = page.getHeight();
+//   const pageWidth = page.getWidth();
+//   const logoDims = logoImage.scale(0.15);
+
+//   let currentY = pageHeight - 50;
+
+//   const drawText = (text, x, y, size = 10, color = rgb(0, 0, 0)) => {
+//     page.drawText(text, { x, y, size, font, color });
+//   };
+
+//   const drawRow = (row, y, widths) => {
+//     let x = 50;
+//     row.forEach((cell, i) => {
+//       drawText(String(cell), x, y, 10);
+//       x += widths[i];
+//     });
+//   };
+
+//   // Embed logo at top
+//   page.drawImage(logoImage, {
+//     x: (pageWidth - logoDims.width) / 1.1,
+//     y: currentY,
+//     width: logoDims.width,
+//     height: logoDims.height,
+//   });
+
+//   currentY -= 60;
+
+//   const grouped = groupByWeek(dataSource);
+
+//   for (const [week, matches] of grouped) {
+//     const filteredMatches =
+//       option === 'result'
+//         ? matches.filter(m => m.result && m.result.toLowerCase() !== 'no result')
+//         : matches;
+
+//     if (filteredMatches.length === 0) continue;
+
+//     drawText(`${week}. kolo`, 50, currentY, 12, rgb(0, 0.38, 0.18));
+//     currentY -= 20;
+
+//     // Draw headers
+//     const headers = option === 'result'
+//       ? ['Domacin', 'Gost', 'Rezultat']
+//       : ['Domacin', 'Gost', 'Rok za tekmo', 'Telefon'];
+//     const widths = option === 'result' ? [150, 150, 100] : [130, 130, 130, 100];
+
+//     drawRow(headers, currentY, widths);
+//     currentY -= 15;
+
+//     for (const match of filteredMatches) {
+//       const deadlineFormatted = new Date(+match.deadline).toLocaleDateString('sl-SI', {
+//         weekday: 'long',
+//         month: 'long',
+//         day: 'numeric',
+//       });
+
+//       const row = option === 'result'
+//         ? [match.home_player, match.away_player, match.result]
+//         : [match.home_player, match.away_player, deadlineFormatted, match.away_phone];
+
+//       drawRow(row, currentY, widths);
+//       currentY -= 15;
+
+//       // Add new page if needed
+//       if (currentY < 60) {
+//         const newPage = pdfDoc.addPage([595, 842]);
+//         page = newPage;
+//         currentY = page.getHeight() - 50;
+//       }
+//     }
+
+//     currentY -= 20;
+//   }
+
+//   const pdfBytes = await pdfDoc.save();
+//   fs.writeFileSync('schedule.pdf', pdfBytes);
+//   console.log('PDF saved as schedule.pdf');
+// }
+
+// // Group by week (utility function)
+// function groupByWeek(matches) {
+//   const map = new Map();
+//   for (const match of matches) {
+//     const week = match.week || 1;
+//     if (!map.has(week)) map.set(week, []);
+//     map.get(week).push(match);
+//   }
+//   return map;
+// }
+
+// // 👇 Dummy test
+// const sampleData = [
+//   { week: 1, home_player: 'Player A', away_player: 'Player B', result: '3:2', deadline: Date.now(), away_phone: '041 123 456' },
+//   { week: 1, home_player: 'Player C', away_player: 'Player D', result: 'no result', deadline: Date.now(), away_phone: '041 654 321' },
+//   { week: 2, home_player: 'Player E', away_player: 'Player F', result: '2:2', deadline: Date.now(), away_phone: '041 000 111' },
+// ];
+
+// generatePdf(sampleData, path.join(__dirname, 'logo.png'), 'schedule');
+async function generateStyledPdf(dataSource, logoPath, option = 'matches') {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontSize = 10;
+  let page = pdfDoc.addPage([595, 842]); // A4 size
+  let pageWidth = page.getWidth();
+  let currentY = 750;
+  pdfDoc.registerFontkit(fontkit);
+  matches: any=[]
+  const fontBytes = fs.readFileSync(path.join(__dirname, 'fonts/DejaVuSans.ttf'));
+  const customFont = await pdfDoc.embedFont(fontBytes);
+
+  const logoBytes = fs.readFileSync(logoPath);
+  const logoImage = await pdfDoc.embedPng(logoBytes);
+  const logoDims = logoImage.scale(0.40);
+
+
+  const drawText = (text, x, y, options = {}) => {
+    page.drawText(text, {
+      x,
+      y,
+      size: options.size || fontSize,
+      color: options.color || rgb(0, 0, 0),
+      font:customFont
+    });
+  };
+
+  const drawRect = (x, y, w, h, color) => {
+    page.drawRectangle({ x, y, width: w, height: h, color });
+  };
+
+  const grouped = groupByWeek(dataSource);
+  page.drawImage(logoImage, {
+    x: pageWidth - logoDims.width - 20,
+    y: currentY,
+    width: logoDims.width,
+    height: logoDims.height
+  });
+  for (const [week, matches] of grouped) {
+    // Filter if in result mode
+    const filtered = option === 'result'
+      ? matches.filter(m => m.result && m.result.toLowerCase() == 'no result')
+      : matches;
+
+    if (filtered.length === 0) continue;
+
+    const estimatedHeight = 20 + 20 + (filtered.length * 18) + 20 ;
+
+    if (currentY - estimatedHeight < 60) {
+      page = pdfDoc.addPage([595, 842]);
+      currentY = 750;
+      page.drawImage(logoImage, {
+        x: pageWidth - logoDims.width - 20,
+        y: currentY,
+        width: logoDims.width,
+        height: logoDims.height
+      });
+    }
+    // Add logo top right
+  
+
+    currentY -= 30;
+    drawText(`${week}. kolo`, 50, currentY, {
+      size: 12,
+      color: rgb(0, 0.38, 0.18)
+    });
+    currentY -= 20;
+
+    const headers = option === 'result'
+      ? ['Domačin', 'Gost', 'Rezultat']
+      : ['Domačin', 'Gost', 'Rok za tekmo', 'Telefon'];
+    const widths = option === 'result' ? [180, 180, 100] : [150, 150, 130, 100];
+
+    const drawTableRow = (row, y, bgColor = null) => {
+      let x = 50;
+      row.forEach((cell, i) => {
+        const w = widths[i];
+        if (bgColor) drawRect(x - 2, y - 2, w, 16, bgColor);
+        drawText(String(cell), x, y, { size: fontSize });
+        x += w;
+      });
+    };
+
+    // Draw table header
+    drawTableRow(headers, currentY, rgb(0, 0.38, 0.18));
+    headers.forEach((text, i) => {
+      drawText(text, 50 + widths.slice(0, i).reduce((a, b) => a + b, 0), currentY, {
+        size: fontSize,
+        color: rgb(1, 1, 1)
+      });
+    });
+
+    currentY -= 20;
+
+    for (const [i, match] of filtered.entries()) {
+      const deadlineFormatted = new Date(+match.deadline).toLocaleDateString('sl-SI', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      const row = option === 'result'
+        ? [match.home_player, match.away_player, match.result]
+        : [match.home_player, match.away_player, deadlineFormatted, match.away_phone];
+
+      const stripeColor = i % 2 === 0 ? rgb(0.95, 0.95, 0.95) : null;
+      drawTableRow(row, currentY, stripeColor);
+      currentY -= 18;
+
+      if (currentY < 60) {
+        page = pdfDoc.addPage([595, 842]);
+        currentY = 780;
+      }
+    }
+
+    currentY -= 20;
+  }
+
+  const pdfBytes = await pdfDoc.save();
+  fs.writeFileSync('styled_schedule.pdf', pdfBytes);
+  console.log('✅ PDF saved as styled_schedule.pdf');
+}
+
+// Group data by week
+function groupByWeek(matches) {
+  const map = new Map();
+  for (const match of matches) {
+    const week = match.week || 1;
+    if (!map.has(week)) map.set(week, []);
+    map.get(week).push(match);
+  }
+  return map;
+}
+
+function getUnplayedMatches(seasonId) {
+  const query = `
+    SELECT 
+      s.id,
+      ps_home.player_id AS home_player_id,
+      hp.name AS home_player,
+      ps_away.player_id AS away_player_id,
+      ap.name AS away_player,
+      s.result,
+      ps_home.league_id,
+      s.week,
+      s.deadline,
+      s.home_player as home_player_s_id,
+      s.away_player as away_player_s_id
+    FROM 
+      schedule s
+    JOIN 
+      players_season ps_home ON s.home_player = ps_home.id
+    JOIN 
+      players hp ON ps_home.player_id = hp.id
+    JOIN 
+      players_season ps_away ON s.away_player = ps_away.id
+    JOIN 
+      players ap ON ps_away.player_id = ap.id
+    WHERE 
+      s.result = "No result"
+      AND ps_home.season_id = ?
+      and ps_home.league_id=1
+    ORDER BY 
+      s.week ASC;
+  `;
+
+  return new Promise((resolve, reject) => {
+    connection.query(query, [seasonId], (err, data) => {
+      if (err) {
+        console.error("Error fetching unplayed matches:", err);
+        reject(err);
+      } else {
+        console.log(data)
+        resolve(data);
+      }
+    });
+  });
+}
+async function generateReport() {
+  try {
+    const matches = await getUnplayedMatches(4);
+    await generateStyledPdf(matches, path.join(__dirname, 'logo.png'), 'result');
+  } catch (err) {
+    console.error('Failed to generate report:', err);
+  }
+}
+
+generateReport();
 
 app.get("/deadline", async (req, res) => {
   updateScheduleWithDates();
@@ -554,9 +849,55 @@ function calculateDeadline(week,start_date) {
 app.get("/getmatches/:leagueId", (req, res) => {
   const leagueId = req.params.leagueId;
   const seasonId = req.headers.season;
+  let token
+  let role=""
+  let query
+  let decoded
+  const authHeader = req.header('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+     
+  }else{
+  token = authHeader.split('Bearer ')[1];
+   decoded = jwt.verify(token, process.env.secret);
+    role = decoded.role;
+  }
 
+ 
+  
 
-  const query = `
+ 
+
+ if(role=="admin"){
+   query = `
+     SELECT 
+    s.id,
+    ps_home.player_id AS home_player_id,
+    hp.name AS home_player,
+    ps_away.player_id AS away_player_id,
+    ap.name AS away_player,
+    s.result,
+    ps_home.league_id,
+    s.week,
+    s.deadline,
+    hp.phone as home_phone,
+    ap.phone as away_phone
+FROM 
+    schedule s
+JOIN 
+    players_season ps_home ON s.home_player = ps_home.id
+JOIN 
+    players hp ON ps_home.player_id = hp.id
+JOIN 
+    players_season ps_away ON s.away_player = ps_away.id
+JOIN 
+    players ap ON ps_away.player_id = ap.id
+WHERE 
+    ps_home.league_id = ?
+    AND ps_home.season_id = ?
+ORDER BY 
+    s.week `;
+ }else{
+  query = `
      SELECT 
     s.id,
     ps_home.player_id AS home_player_id,
@@ -567,6 +908,7 @@ app.get("/getmatches/:leagueId", (req, res) => {
     ps_home.league_id,
     s.week,
     s.deadline
+  
 FROM 
     schedule s
 JOIN 
@@ -582,8 +924,10 @@ WHERE
     AND ps_home.season_id = ?
 ORDER BY 
     s.week;
+`;
+ }
 
-    `;
+ 
 
   connection.query(query, [leagueId, seasonId], (err, results) => {
     if (err) {
@@ -1228,7 +1572,7 @@ app.get("/standings/:id", (req, res) => {
   });
 });
 
-app.post("/update-match-result",verifyToken("user"), (req, res) => {
+app.post("/update-match-result",verifyToken("user admin"), (req, res) => {
   const { id, result } = req.body;
   
   const query = "UPDATE schedule SET result = ? WHERE id = ? and result_confirmed=0";

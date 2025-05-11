@@ -17,7 +17,7 @@ function verifyToken(requiredRole) {
             req.userId = decoded.userId;
             req.role = decoded.role;
 
-            if (!req.role || (requiredRole && req.role !== requiredRole)) {
+            if (!req.role || (requiredRole && req.role.includes(requiredRole) )) {
                 return res.status(403).json({ error: 'Access denied, insufficient permissions' });
             }
 

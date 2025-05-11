@@ -77,4 +77,5 @@
 </table>
 
 <mat-paginator [pageSize]="15" showFirstLastButtons></mat-paginator>
-<button (click)="exportToPDF()">Export to PDF</button>
+<button (click)="exportToPDF('result')" *ngIf="AuthService.isAuthenticated() && AuthService.hasRole('admin')">Export to PDF results</button>
+<button (click)="exportToPDF('schedule')" *ngIf="AuthService.isAuthenticated() && AuthService.hasRole('admin')">Export to PDF schedule</button>

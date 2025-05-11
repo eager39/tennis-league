@@ -8,7 +8,7 @@ import { environment } from '../environments/environment';
   providedIn: 'root'
 })
 export class SeasonService {
-  private currentSeasonSource = new BehaviorSubject<number>(1); // Default season
+  private currentSeasonSource = new BehaviorSubject<number>(4); // Default season
   currentSeason$ = this.currentSeasonSource.asObservable();
   constructor(private http: HttpClient) { }
   setSeason(season: number) {
