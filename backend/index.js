@@ -18,18 +18,25 @@ app.enable("trust proxy");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const verifyToken = require('../backend/authmiddleware');
-const pdfparse = require("pdf-parse");
 
-const axios = require("axios");
+
+
 const path = require("path");
 const moment = require("moment"); 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { match } = require("assert");
-const { start } = require("repl");
+
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 const fontkit = require('fontkit'); //
-app.use(cors());
+app.use(cors({
+  origin: ['https://krizanic.one','http://localhost:4200'], // match your frontend's origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'season', 'Authorization'],
+  credentials: true // only if you're using cookies or session auth
+}));
+app.options('*', cors()); // Allow preflight for all routes
+
+
 app.use(bodyParser.json());
 var getIP = require("ipware")().get_ip;
 app.use(function (req, res, next) {
@@ -167,13 +174,14 @@ function shuffle(array) {
 // ];
 
 // generatePdf(sampleData, path.join(__dirname, 'logo.png'), 'schedule');
-async function generateStyledPdf(dataSource, logoPath, option = 'matches') {
+async function generateStyledPdf(dataSource, logoPath, option = 'matches',leagueId) {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontSize = 10;
   let page = pdfDoc.addPage([595, 842]); // A4 size
   let pageWidth = page.getWidth();
   let currentY = 750;
+  let weekmap=[]
   pdfDoc.registerFontkit(fontkit);
   matches: any=[]
   const fontBytes = fs.readFileSync(path.join(__dirname, 'fonts/DejaVuSans.ttf'));
@@ -236,9 +244,9 @@ async function generateStyledPdf(dataSource, logoPath, option = 'matches') {
     currentY -= 20;
 
     const headers = option === 'result'
-      ? ['Domačin', 'Gost', 'Rezultat']
+      ? ['liga','Domačin', 'Gost', 'Rezultat']
       : ['Domačin', 'Gost', 'Rok za tekmo', 'Telefon'];
-    const widths = option === 'result' ? [180, 180, 100] : [150, 150, 130, 100];
+    const widths = option === 'result' ? [100,130, 130, 100] : [150, 150, 130, 100];
 
     const drawTableRow = (row, y, bgColor = null) => {
       let x = 50;
@@ -267,9 +275,13 @@ async function generateStyledPdf(dataSource, logoPath, option = 'matches') {
         month: 'long',
         day: 'numeric',
       });
+      if(weekmap.includes(match.week)){
 
+      }else{
+        weekmap.push(match.week)
+      }
       const row = option === 'result'
-        ? [match.home_player, match.away_player, match.result]
+        ? [match.name,match.home_player, match.away_player, match.result]
         : [match.home_player, match.away_player, deadlineFormatted, match.away_phone];
 
       const stripeColor = i % 2 === 0 ? rgb(0.95, 0.95, 0.95) : null;
@@ -286,75 +298,151 @@ async function generateStyledPdf(dataSource, logoPath, option = 'matches') {
   }
 
   const pdfBytes = await pdfDoc.save();
-  fs.writeFileSync('styled_schedule.pdf', pdfBytes);
+  fs.writeFileSync('neodigra tekme'+weekmap+' tedna.pdf', pdfBytes);
   console.log('✅ PDF saved as styled_schedule.pdf');
 }
-
-// Group data by week
-function groupByWeek(matches) {
+function groupByWeek(matches) { //group by week and order by league same pdf
   const map = new Map();
+
   for (const match of matches) {
     const week = match.week || 1;
-    if (!map.has(week)) map.set(week, []);
+
+    if (!map.has(week)) {
+      map.set(week, []);
+    }
+
     map.get(week).push(match);
   }
+
+  // Sort matches in each week group by league_id DESC
+  for (const [week, matchList] of map) {
+    matchList.sort((a, b) => a.league_id - b.league_id);
+  }
+
   return map;
 }
+// // Group data by week // group by week for different pdfs
+// function groupByWeek(matches) {
+//   const map = new Map();
+//   for (const match of matches) {
+//     const week = match.week || 1;
+//     if (!map.has(week)) map.set(week, []);
+//     map.get(week).push(match);
+//   }
+//   return map;
+// }
+// function groupByWeek(matches) { //group by week and order by league same pdf
+//   const map = new Map();
 
-function getUnplayedMatches(seasonId) {
+//   for (const match of matches) {
+//     const week = match.week || 1;
+
+//     if (!map.has(week)) {
+//       map.set(week, []);
+//     }
+
+//     map.get(week).push(match);
+//   }
+
+//   // Sort matches in each week group by league_id DESC
+//   for (const [week, matchList] of map) {
+//     matchList.sort((a, b) => a.league_id - b.league_id);
+//   }
+
+//   return map;
+// }
+
+function getUnplayedMatches(seasonId,leagueId) {
   const query = `
-    SELECT 
-      s.id,
-      ps_home.player_id AS home_player_id,
-      hp.name AS home_player,
-      ps_away.player_id AS away_player_id,
-      ap.name AS away_player,
-      s.result,
-      ps_home.league_id,
-      s.week,
-      s.deadline,
-      s.home_player as home_player_s_id,
-      s.away_player as away_player_s_id
-    FROM 
-      schedule s
-    JOIN 
-      players_season ps_home ON s.home_player = ps_home.id
-    JOIN 
-      players hp ON ps_home.player_id = hp.id
-    JOIN 
-      players_season ps_away ON s.away_player = ps_away.id
-    JOIN 
-      players ap ON ps_away.player_id = ap.id
-    WHERE 
-      s.result = "No result"
-      AND ps_home.season_id = ?
-      and ps_home.league_id=1
-    ORDER BY 
-      s.week ASC;
+   SELECT
+  s.id,
+  ps_home.player_id AS home_player_id,
+  hp.name AS home_player,
+  ps_away.player_id AS away_player_id,
+  ap.name AS away_player,
+  s.result,
+  ps_home.league_id,
+  s.week,
+  s.deadline,
+  s.home_player AS home_player_s_id,
+  s.away_player AS away_player_s_id,
+  l.name
+FROM schedule s
+JOIN players_season ps_home ON s.home_player = ps_home.id
+JOIN players hp ON ps_home.player_id = hp.id
+JOIN players_season ps_away ON s.away_player = ps_away.id
+JOIN players ap ON ps_away.player_id = ap.id
+JOIN leagues l on ps_home.league_id=l.id
+WHERE s.result = "No result"
+  AND ps_home.season_id = 4
+ 
+  AND s.deadline < (UNIX_TIMESTAMP()*1000 - 30 * 24 * 60 * 60*1000)
+ORDER BY s.week ASC;
   `;
 
   return new Promise((resolve, reject) => {
-    connection.query(query, [seasonId], (err, data) => {
+    connection.query(query, [seasonId,leagueId], (err, data) => {
       if (err) {
         console.error("Error fetching unplayed matches:", err);
         reject(err);
       } else {
-        console.log(data)
+       // console.log(data)
         resolve(data);
       }
     });
   });
 }
-async function generateReport() {
+async function getLeaguesWithUnplayedMatches(seasonid) {
+  const query = `
+    SELECT DISTINCT ps_home.league_id AS league_id, l.name
+    FROM schedule s
+    JOIN players_season ps_home ON s.home_player = ps_home.id
+    JOIN players_season ps_away ON s.away_player = ps_away.id
+    JOIN leagues l ON ps_home.league_id = l.id
+    WHERE s.result = "No result"
+      AND ps_home.season_id = ?
+      AND s.deadline < (UNIX_TIMESTAMP() * 1000 + 0 * 24 * 60 * 60 * 1000)
+    ORDER BY ps_home.league_id ASC
+  `;
+  return new Promise((resolve, reject) => {
+    connection.query(query, [seasonid], (err, data) => {
+      if (err) {
+        console.error("Error fetching unplayed matches:", err);
+        reject(err);
+      } else {
+        //console.log(data)
+        resolve(data);
+      }
+    });
+  });
+}
+
+async function generateReportsForAllLeagues(seasonid) {
   try {
-    const matches = await getUnplayedMatches(4);
-    await generateStyledPdf(matches, path.join(__dirname, 'logo.png'), 'result');
+   // const leagues = await getLeaguesWithUnplayedMatches(seasonid);
+   // console.log(leagues)
+   // for (const league of leagues) {
+     // const leagueId = league.league_id;
+     // const matches = await getUnplayedMatches(seasonid, leagueId);
+      const matches = await getUnplayedMatches(seasonid);
+      if (matches.length > 0) {
+        await generateStyledPdf(
+          matches,
+          path.join(__dirname, 'logo.png'),
+          'result',
+         // leagueId
+        );
+        //console.log(`✅ Report generated for league ${leagueId}`);
+      } else {
+       // console.log(`ℹ️ No matches to report for league ${leagueId}`);
+      }
+   // }
   } catch (err) {
-    console.error('Failed to generate report:', err);
+    console.error('❌ Failed to generate reports:', err);
   }
 }
 
-generateReport();
+generateReportsForAllLeagues(4);
 
 app.get("/deadline", async (req, res) => {
   updateScheduleWithDates();
@@ -1205,12 +1293,19 @@ WHERE
             standings[awayPlayerSeasonId].setsPlayed += homeSetsWon + awaySetsWon;
           
             // ✅ Deduct points if home player received a penalty
-            if (match.penalty ) {
+            console.log(match)
+            if (match.penalty==homePlayerSeasonId ) {
               
               standings[homePlayerSeasonId].points -= 1;
               standings[homePlayerSeasonId].penalties +=1;
               console.log(
                 `Penalty applied: ${standings[homePlayerSeasonId].name} loses 1 point`
+              );
+            }else if(match.penalty==awayPlayerSeasonId){
+              standings[awayPlayerSeasonId].points -= 1;
+              standings[awayPlayerSeasonId].penalties +=1;
+              console.log(
+                `Penalty applied: ${standings[awayPlayerSeasonId].name} loses 1 point`
               );
             }
           });
@@ -1253,6 +1348,7 @@ WHERE
           
             return sortedPlayers;
           };
+         let alltiedplayers=[]
           
           // Helper function to sort tied players and store match results
           const sortTiedPlayers = (tiedPlayers) => {
@@ -1285,6 +1381,23 @@ tiedPlayers.forEach((playerA, indexA) => {
           (m.home_player == playerA && m.away_player == playerB) ||
           (m.home_player == playerB && m.away_player == playerA)
       );
+      if (!match.result || match.result == "no result") {
+        playerStatsInTieGroup[playerA].opponents.push({
+          opponent: standings[playerB].name,
+          sets: match.result || "-",
+          result: "",
+          netSetsWon: 0,
+          netGamesWon: 0,
+        });
+        playerStatsInTieGroup[playerB].opponents.push({
+          opponent: standings[playerA].name,
+          sets: match.result || "-",
+          result: "",
+          netSetsWon: 0,
+          netGamesWon: 0,
+        });
+        return;
+      }
       
       if (match && match.result) {
         const sets = match.result.split(",").map((set) => set.trim());
@@ -1298,22 +1411,7 @@ tiedPlayers.forEach((playerA, indexA) => {
           awayGamesWon += awayScore;
         });
 
-        // Save match result for both Player A and Player B
-        const matchResultA = {
-          opponent: standings[playerB].name,
-          sets: match.result,
-          result: homeSetsWon > awaySetsWon ? 'Win' : 'Loss',
-          netSetsWon: homeSetsWon - awaySetsWon,
-          netGamesWon: homeGamesWon - awayGamesWon,
-        };
-
-        const matchResultB = {
-          opponent: standings[playerA].name,
-          sets: match.result,
-          result: awaySetsWon > homeSetsWon ? 'Win' : 'Loss',
-          netSetsWon: awaySetsWon - homeSetsWon,
-          netGamesWon: awayGamesWon - homeGamesWon,
-        };
+   
 
         // Update stats for Player A and Player B
         if (match.home_player == playerA) {
@@ -1333,20 +1431,28 @@ tiedPlayers.forEach((playerA, indexA) => {
           playerStatsInTieGroup[playerB].netSetsWon += awaySetsWon - homeSetsWon;
           playerStatsInTieGroup[playerA].netGamesWon += homeGamesWon - awayGamesWon;
           playerStatsInTieGroup[playerB].netGamesWon += awayGamesWon - homeGamesWon;
-          
+          function checkresult(match){
+            if(match.result=='No result'){
+              return ''
+            }else{
+             return (homeSetsWon > awaySetsWon ? 'Win' : 'Loss')
+            }
+          }
           // Store correct results for both players' perspectives
           playerStatsInTieGroup[playerA].opponents.push({
             opponent: standings[playerB].name,
             sets: match.result,
-            result: homeSetsWon > awaySetsWon ? 'Win' : 'Loss', // Player A's result (Home perspective)
+            result: checkresult(match), // Player A's result (Home perspective)
             netSetsWon: homeSetsWon - awaySetsWon,
             netGamesWon: homeGamesWon - awayGamesWon,
           });
           
+       
+          
           playerStatsInTieGroup[playerB].opponents.push({
             opponent: standings[playerA].name,
             sets: match.result,
-            result: awaySetsWon > homeSetsWon ? 'Win' : 'Loss', // Player B's result (Away perspective)
+            result: checkresult(match),// Player B's result (Away perspective)
             netSetsWon: awaySetsWon - homeSetsWon,
             netGamesWon: awayGamesWon - homeGamesWon,
           });
@@ -1389,30 +1495,61 @@ tiedPlayers.forEach((playerA, indexA) => {
   });
 });
 
-           // console.log(Object.keys(playerStatsInTieGroup)[0])
-            Object.keys(playerStatsInTieGroup).forEach((playerId) => {
-           
-          
-           
-              const saveIndividualTieBreakerStatsQuery = `
-                UPDATE standings
-                SET tie_breaker_stats = ?
-                WHERE player = ?;
-              `;
-           
-              connection.query(
-                saveIndividualTieBreakerStatsQuery,
-                [JSON.stringify(playerStatsInTieGroup[playerId]), playerId],
-                (err) => {
-                  if (err) {
-                    console.error("Error saving tie-breaker stats:", err);
-                  } else {
-                    console.log(`Tie-breaker stats saved successfully for player ${playerId}`);
-                  }
-                }
-              );
-            });  
-            
+     // Later, each time you get a new playerStatsInTieGroup object:
+alltiedplayers.push(playerStatsInTieGroup);
+
+// Combine all tied players into one set for checking
+const combinedTiedPlayerIds = new Set();
+
+alltiedplayers.forEach(tiedGroup => {
+  Object.keys(tiedGroup).forEach(playerId => {
+    combinedTiedPlayerIds.add(playerId);
+  });
+});
+
+const allPlayerIds = Object.keys(standings);
+
+allPlayerIds.forEach((playerId) => {
+  if (combinedTiedPlayerIds.has(playerId)) {
+    // This player is in at least one tied group, keep tie-breaker stats
+    const stats = playerStatsInTieGroup[playerId] || {}; // Or get from the last group where player is tied
+    
+    if (!stats || Object.keys(stats).length === 0) {
+      console.warn(`⚠️ No stats found for tied player ${playerId}`);
+      return;
+    }
+    
+    const saveStatsQuery = `
+      UPDATE standings
+      SET tie_breaker_stats = ?
+      WHERE player = ?;
+    `;
+    
+    connection.query(saveStatsQuery, [JSON.stringify(stats), playerId], (err) => {
+      if (err) {
+        console.error("❌ Error saving tie-breaker stats for", playerId, err);
+      } else {
+        console.log(`✅ Tie-breaker stats saved for player ${playerId}`);
+      }
+    });
+    
+  } else {
+    // Player is NOT tied in any group, remove tie-breaker stats
+    const deleteStatsQuery = `
+      UPDATE standings
+      SET tie_breaker_stats = NULL
+      WHERE player = ?;
+    `;
+    
+    connection.query(deleteStatsQuery, [playerId], (err) => {
+      if (err) {
+        console.error("❌ Error removing tie-breaker stats for", playerId, err);
+      } else {
+        console.log(`🧹 Tie-breaker stats removed for player ${playerId}`);
+      }
+    });
+  }
+});
             // Sort tied players based on wins, net sets won, and net games won
             return tiedPlayers.sort((playerA, playerB) => {
         
@@ -1435,6 +1572,8 @@ tiedPlayers.forEach((playerA, indexA) => {
           
           const orderedPlayerIds = reorderStandings();
 
+
+          
           // if (orderedPlayerIds.length === new Set(orderedPlayerIds.map(id => standings[id].points )).size) {
           //   // If all players have unique points, clear tie-breaker stats
           //   const clearTieBreakerStatsQuery = `
@@ -1572,21 +1711,55 @@ app.get("/standings/:id", (req, res) => {
   });
 });
 
-app.post("/update-match-result",verifyToken("user admin"), (req, res) => {
+app.post("/update-match-result", verifyToken("user,admin"), (req, res) => {
   const { id, result } = req.body;
-  
-  const query = "UPDATE schedule SET result = ? WHERE id = ? and result_confirmed=0";
+  const userId = req.user?.id;
+  const role = req.user?.role;
 
-  connection.query(query, [result, id], (err, results) => {
+  if (!id || !result) {
+    return res.status(400).json({ error: "Missing match ID or result" });
+  }
+
+  // First, fetch the match to validate ownership
+  const checkQuery = `
+   SELECT p.id
+    FROM schedule s
+    JOIN players_season ps_home ON s.home_player = ps_home.id
+  	join players p on ps_home.player_id=p.id
+    WHERE s.id = ? AND s.result_confirmed = 0
+  `;
+
+  connection.query(checkQuery, [id], (err, results) => {
     if (err) {
-      console.error("Error updating match result:", err);
-      res
-        .status(500)
-        .json({ error: "An error occurred while updating match result" });
-      return;
+      console.error("Error fetching match:", err);
+      return res.status(500).json({ error: "Database error while checking match" });
     }
 
-    res.json({ message: "Match result updated successfully" });
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Match not found or already confirmed" });
+    }
+
+    const match = results[0];
+    console.log( match.id +"vs "+ userId)
+    // Check if the user is the home player or has admin role
+    if (role !== "admin" && match.id !== userId) {
+      return res.status(403).json({ error: "Unauthorized to update this match" });
+    }
+
+    // Proceed to update the result
+    const updateQuery = `
+      UPDATE schedule SET result = ? 
+      WHERE id = ? AND result_confirmed = 0
+    `;
+
+    connection.query(updateQuery, [result, id], (err, updateResult) => {
+      if (err) {
+        console.error("Error updating match result:", err);
+        return res.status(500).json({ error: "Failed to update match result" });
+      }
+
+      res.json({ message: "Match result updated successfully" });
+    });
   });
 });
 app.post("/ifalreadyinleague", (req, res) => {
@@ -1693,81 +1866,81 @@ app.post("/removePlayer",verifyToken("admin"), (req, res) => {
     res.status(200).json({ message: "Igralec uspešno odstranjen!" });
   });
 });
-app.post("/removeAllMatches",verifyToken("admin"), (req, res) => {
-  const { id} = req.body;
-  const {season} =req.headers
- 
-  const query = "DELETE schedule FROM schedule LEFT JOIN players_season on players_season.id=schedule.home_player WHERE schedule.result='no result' and players_season.season_id=? and players_season.league_id=?";
+// app.post("/removeAllMatches", (req, res) => {
+//   const { id} = req.body;
+//   const {season} =req.headers
+//  console.log(req.headers)
+//   const query = "DELETE schedule FROM schedule LEFT JOIN players_season on players_season.id=schedule.home_player WHERE schedule.result='no result' and players_season.season_id=? and players_season.league_id=?";
 
-  connection.query(query, [season,id], (err, results) => {
-    if (err) {
-      console.error("Error updating match result:", err);
-      res
-        .status(500)
-        .json({ error: "An error occurred while updating match result" });
-      return;
-    }
-    console.log(results)
-    res.status(200).json({ message: "Igralec uspešno odstranjen!" });
-  });
-});
-app.post("/demote",verifyToken("admin"), (req, res) => {
-  const { id, status,seasonid } = req.body;
-  const query = "UPDATE players_season SET promotion_status = ? WHERE id = ? and season_id=?";
+//   connection.query(query, [season,id], (err, results) => {
+//     if (err) {
+//       console.error("Error updating match result:", err);
+//       res
+//         .status(500)
+//         .json({ error: "An error occurred while updating match result" });
+//       return;
+//     }
+//     console.log(results)
+//     res.status(200).json({ message: "Igralec uspešno odstranjen!" });
+//   });
+// });
+// app.post("/demote",verifyToken("admin"), (req, res) => {
+//   const { id, status,seasonid } = req.body;
+//   const query = "UPDATE players_season SET promotion_status = ? WHERE id = ? and season_id=?";
 
-  connection.query(query, [status, id,seasonid], (err, results) => {
-    if (err) {
-      console.error("Error updating match result:", err);
-      res
-        .status(500)
-        .json({ error: "An error occurred while updating match result" });
-      return;
-    }
+//   connection.query(query, [status, id,seasonid], (err, results) => {
+//     if (err) {
+//       console.error("Error updating match result:", err);
+//       res
+//         .status(500)
+//         .json({ error: "An error occurred while updating match result" });
+//       return;
+//     }
 
-    res.status(200).json({ message: "Match result updated successfully" });
-  });
-});
-app.post("/fetchpromotedanddemoted",verifyToken("admin"), (req, res) => {
-  season_id=req.body.seasonid
-  const sql = `
-    WITH TopPlayers AS (
-        SELECT s.player, p.name, s.points, s.position, ps.league_id,l.name as liga,ps.season_id,ps.promotion_status,
-               ROW_NUMBER() OVER (PARTITION BY ps.league_id ORDER BY s.position ASC) AS rank
-        FROM standings s
-        JOIN players_season ps ON s.player = ps.id
-        JOIN players p ON ps.player_id = p.id
-        JOIN leagues l ON ps.league_id=l.id
-        WHERE ps.league_id IN (2, 3, 4, 5) 
-          AND ps.injured = 0
-          AND s.position IN (1, 2, 3) 
-          and ps.season_id=?
-    ),
-    BottomPlayers AS (
-        SELECT s.player, p.name, s.points, s.position, ps.league_id,l.name as liga,ps.season_id,ps.promotion_status,
-               ROW_NUMBER() OVER (PARTITION BY ps.league_id ORDER BY s.position DESC) AS rank
-        FROM standings s
-        JOIN players_season ps ON s.player = ps.id
-        JOIN players p ON ps.player_id = p.id
-         JOIN leagues l ON ps.league_id=l.id
-        WHERE ps.league_id IN (1, 2, 3, 4) 
-          AND ps.injured = 0 
-          and ps.season_id=?
-    )
-    SELECT * FROM TopPlayers WHERE rank <= 3 and promotion_status=''
-    UNION ALL
-    SELECT * FROM BottomPlayers WHERE rank <= 3 and promotion_status=''
-  `;
+//     res.status(200).json({ message: "Match result updated successfully" });
+//   });
+// });
+// app.post("/fetchpromotedanddemoted",verifyToken("admin"), (req, res) => {
+//   season_id=req.body.seasonid
+//   const sql = `
+//     WITH TopPlayers AS (
+//         SELECT s.player, p.name, s.points, s.position, ps.league_id,l.name as liga,ps.season_id,ps.promotion_status,
+//                ROW_NUMBER() OVER (PARTITION BY ps.league_id ORDER BY s.position ASC) AS rank
+//         FROM standings s
+//         JOIN players_season ps ON s.player = ps.id
+//         JOIN players p ON ps.player_id = p.id
+//         JOIN leagues l ON ps.league_id=l.id
+//         WHERE ps.league_id IN (2, 3, 4, 5) 
+//           AND ps.injured = 0
+//           AND s.position IN (1, 2, 3) 
+//           and ps.season_id=?
+//     ),
+//     BottomPlayers AS (
+//         SELECT s.player, p.name, s.points, s.position, ps.league_id,l.name as liga,ps.season_id,ps.promotion_status,
+//                ROW_NUMBER() OVER (PARTITION BY ps.league_id ORDER BY s.position DESC) AS rank
+//         FROM standings s
+//         JOIN players_season ps ON s.player = ps.id
+//         JOIN players p ON ps.player_id = p.id
+//          JOIN leagues l ON ps.league_id=l.id
+//         WHERE ps.league_id IN (1, 2, 3, 4) 
+//           AND ps.injured = 0 
+//           and ps.season_id=?
+//     )
+//     SELECT * FROM TopPlayers WHERE rank <= 3 and promotion_status=''
+//     UNION ALL
+//     SELECT * FROM BottomPlayers WHERE rank <= 3 and promotion_status=''
+//   `;
 
-  connection.query(sql,[season_id,season_id], (error, results) => {
-    if (error) {
-      console.error('Error executing query:', error);
-      return res.status(500).json({ error: 'Database query failed' });
-    }
-    console.log(results)
-    // Sending the results
-    res.json(results);
-  });
-});
+//   connection.query(sql,[season_id,season_id], (error, results) => {
+//     if (error) {
+//       console.error('Error executing query:', error);
+//       return res.status(500).json({ error: 'Database query failed' });
+//     }
+//     console.log(results)
+//     // Sending the results
+//     res.json(results);
+//   });
+// });
 
 app.post("/endLeague",verifyToken("admin"), (req, res) => {
   // const { id, result } = req.body;
@@ -1825,10 +1998,11 @@ app.get("/leagues", (req, res) => {
   const seasonId = req.headers.season;
 
   const query = `
-        SELECT DISTINCT ps.league_id,l.*
-        FROM players_season ps
-        JOIN leagues l on ps.league_id=l.id
-        WHERE ps.season_id = ?
+       SELECT DISTINCT ps.league_id, l.*
+FROM schedule s
+JOIN players_season ps ON ps.id = s.home_player OR ps.id = s.away_player
+JOIN leagues l ON ps.league_id = l.id
+WHERE ps.season_id = ?;
     `;
 
   connection.query(query, [seasonId], (err, results) => {
@@ -2091,7 +2265,7 @@ app.post("/login", (req, res) => {
         process.env.secret,
         { expiresIn: "24h" }
       );
-       sendEmail();
+      // sendEmail();
       res.send({ token });
     } else {
       res.status(401).send("Napačno geslo!");

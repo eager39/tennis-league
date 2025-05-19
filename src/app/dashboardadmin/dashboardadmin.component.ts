@@ -64,6 +64,7 @@ penalty(id:any,matchid:number){
    
 if(data){
   alert("Kazenska točka dodeljena")
+  this.calculateStandings()
 }
   })
 }

@@ -37,7 +37,7 @@ export class SidenavComponent {
  this.seasonService.currentSeason$.subscribe((seasonId: any) => {
  this.currentseason=seasonId
  this.getSeasonInfo()
-
+  this.fetchLeagues()
 });
 }
 isInApril(): boolean {

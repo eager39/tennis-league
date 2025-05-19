@@ -15,7 +15,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideClientHydration(),
     provideHttpClient(
-      withInterceptors([jwtInterceptorFn, loadingInterceptorFn]),withFetch() // Merging interceptors
+      withInterceptors([jwtInterceptorFn, loadingInterceptorFn]) // Merging interceptors
     ),
     provideAnimationsAsync(),
     { provide: JWT_OPTIONS, useValue: {} }, // Optional: If JwtModule is needed

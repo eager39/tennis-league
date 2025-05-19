@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const dotenv=require("dotenv")
+const dotenv = require('dotenv');
 dotenv.config();
 
 function verifyToken(requiredRole) {
@@ -14,10 +14,12 @@ function verifyToken(requiredRole) {
 
         try {
             const decoded = jwt.verify(token, process.env.secret);
+            req.user = decoded; // Attach entire decoded token
             req.userId = decoded.userId;
             req.role = decoded.role;
 
-            if (!req.role || (requiredRole && req.role.includes(requiredRole) )) {
+            const requiredRoles = requiredRole.split(",");
+            if (!req.role || (requiredRole && !requiredRoles.includes(req.role))) {
                 return res.status(403).json({ error: 'Access denied, insufficient permissions' });
             }
 

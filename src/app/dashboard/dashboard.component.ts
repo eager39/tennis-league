@@ -68,7 +68,7 @@ export class DashboardComponent {
     this.DataService.getMyMatches(id).subscribe(
       (data) => {
         this.matches = data;
-       
+       console.log(this.matches)
 // Two weeks in milliseconds
 
 // Upcoming Matches: Show only if deadline is between 2 weeks and 1 week away
@@ -100,9 +100,9 @@ this.pendingResultsMatches = this.matches.filter(match => {
     );
   }
   isAwayPlayer(match: any): boolean {
-   
+   console.log(this.AuthService.getUserId() == match.user_id,this.AuthService.getUserId() ,match.away_player_id)
     // Compare the current user's username with the away_player field
-    return this.AuthService.getUserId() == match.away_player_id;
+    return this.AuthService.getUserId() == match.user_id;
   }
   confirmResult(match: any) {
     // Logic to confirm the result by the away player
