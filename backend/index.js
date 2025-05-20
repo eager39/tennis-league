@@ -18,7 +18,7 @@ app.enable("trust proxy");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const verifyToken = require('../backend/authmiddleware');
-
+const cron = require('node-cron');
 
 
 const path = require("path");
@@ -28,13 +28,9 @@ const jwt = require("jsonwebtoken");
 
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 const fontkit = require('fontkit'); //
-app.use(cors({
-  origin: ['https://krizanic.one','http://localhost:4200'], // match your frontend's origin
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'season', 'Authorization'],
-  credentials: true // only if you're using cookies or session auth
-}));
-app.options('*', cors()); // Allow preflight for all routes
+const { match } = require("assert");
+const { timeout } = require("rxjs");
+app.use(cors())
 
 
 app.use(bodyParser.json());
@@ -174,7 +170,7 @@ function shuffle(array) {
 // ];
 
 // generatePdf(sampleData, path.join(__dirname, 'logo.png'), 'schedule');
-async function generateStyledPdf(dataSource, logoPath, option = 'matches',leagueId) {
+async function generateStyledPdf(dataSource, logoPath) {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontSize = 10;
@@ -301,6 +297,152 @@ async function generateStyledPdf(dataSource, logoPath, option = 'matches',league
   fs.writeFileSync('neodigra tekme'+weekmap+' tedna.pdf', pdfBytes);
   console.log('✅ PDF saved as styled_schedule.pdf');
 }
+async function generateunplayedmatchespdfthatarepastdeadline(dataSource, logoPath,gender,filelocation) {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontSize = 12;
+  let page = pdfDoc.addPage([595, 842]); // A4 size
+  let pageWidth = page.getWidth();
+  let currentY = 730;
+  let weekmap=[]
+  pdfDoc.registerFontkit(fontkit);
+  matches: any=[]
+  const fontBytes = fs.readFileSync(path.join(__dirname, 'fonts/DejaVuSans.ttf'));
+  const customFont = await pdfDoc.embedFont(fontBytes);
+
+  const logoBytes = fs.readFileSync(logoPath);
+  const logoImage = await pdfDoc.embedPng(logoBytes);
+  const logoDims = logoImage.scale(0.60);
+
+
+  const drawText = (text, x, y, options = {}) => {
+    page.drawText(text, {
+      x,
+      y,
+      size: options.size || fontSize,
+      color: options.color || rgb(0, 0, 0),
+      font:customFont
+    });
+  };
+
+  const drawRect = (x, y, w, h, color) => {
+    page.drawRectangle({ x, y, width: w, height: h, color });
+  };
+
+  const grouped = groupByWeek(dataSource);
+  page.drawImage(logoImage, {
+    x: pageWidth - logoDims.width - 20,
+    y: currentY,
+    width: logoDims.width,
+    height: logoDims.height
+  });
+  
+   const textWidth = font.widthOfTextAtSize("Neodigrane tekme", 24);
+    drawText("Neodigrane tekme", (pageWidth-textWidth)/2, 770, {
+      size: 24,
+      color: rgb(0, 0.38, 0.18)
+    });
+  for (const [week, matches] of grouped) {
+    // Filter if in result mode
+   
+
+
+    const estimatedHeight = 20 + 20 + (matches.length * 18) + 20 ;
+
+    if (currentY - estimatedHeight < 60) {
+      page = pdfDoc.addPage([595, 842]);
+      currentY = 820;
+      // page.drawImage(logoImage, {
+      //   x: pageWidth - logoDims.width - 20,
+      //   y: currentY,
+      //   width: logoDims.width,
+      //   height: logoDims.height
+      // });
+    }
+    // Add logo top right
+  
+
+    currentY -= 30;
+    drawText(`${week}. kolo`, 50, currentY, {
+      size: 12,
+      color: rgb(0, 0.38, 0.18)
+    });
+    currentY -= 20;
+    let headers=[]
+     let widths=[]
+
+      if(gender=="m"){
+headers = 
+      ['Liga','Domačin', 'Gost', 'Rezultat']
+       widths = [150, 150, 130, 100];
+      }else{
+       headers =  ['Domačin', 'Gost', 'Rezultat']
+       widths = [ 176, 176, 176];
+      }
+   
+
+ const drawTableRow = (row, y, bgColor = null,textColor = rgb(0, 0, 0)) => {
+  let x = 50;
+  row.forEach((cell, i) => {
+    const w = widths[i];
+    
+    // Replace "No result" with "Neodigrano"
+    const content = String(cell).trim() === "No result" ? "Neodigrano" : String(cell);
+
+    if (bgColor) drawRect(x - 2, y - 2, w, 16, bgColor);
+    drawText(content, x, y, { size: fontSize ,color: textColor });
+    x += w;
+  });
+};
+    // Draw table header
+    drawTableRow(headers, currentY, rgb(0, 0.38, 0.18),rgb(1, 1,1));
+    // headers.forEach((text, i) => {
+    //   // drawText(text, 50 + widths.slice(0, i).reduce((a, b) => a + b, 0), currentY, {
+    //   //   size: fontSize,
+    //   //   color: rgb(1, 1, 1)
+    //   // });
+    // });
+
+    currentY -= 20;
+
+    for (const [i, match] of matches.entries()) {
+      const deadlineFormatted = new Date(+match.deadline).toLocaleDateString('sl-SI', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      });
+      if(weekmap.includes(match.week)){
+
+      }else{
+        weekmap.push(match.week)
+      }
+      let row=[]
+      if(gender=="m"){
+        row =  [match.name,match.home_player, match.away_player, match.result]
+      }else{
+         row =  [match.home_player, match.away_player, match.result]
+      }
+      
+       
+
+      const stripeColor = i % 2 === 0 ? rgb(0.95, 0.95, 0.95) : null;
+      drawTableRow(row, currentY, stripeColor);
+      currentY -= 18;
+
+      if (currentY < 60) {
+        page = pdfDoc.addPage([595, 842]);
+        currentY = 780;
+      }
+    }
+
+    currentY -= 20;
+  }
+
+  const pdfBytes = await pdfDoc.save();
+
+  fs.writeFileSync(filelocation+".pdf", pdfBytes);
+  console.log('✅ PDF saved as unplayedmatches.pdf');
+}
 function groupByWeek(matches) { //group by week and order by league same pdf
   const map = new Map();
 
@@ -374,14 +516,119 @@ JOIN players_season ps_away ON s.away_player = ps_away.id
 JOIN players ap ON ps_away.player_id = ap.id
 JOIN leagues l on ps_home.league_id=l.id
 WHERE s.result = "No result"
-  AND ps_home.season_id = 4
- 
-  AND s.deadline < (UNIX_TIMESTAMP()*1000 - 30 * 24 * 60 * 60*1000)
+  AND ps_home.season_id = ?
+  AND s.deadline < (UNIX_TIMESTAMP()*1000 + 7 * 24 * 60 * 60*1000)
 ORDER BY s.week ASC;
   `;
 
   return new Promise((resolve, reject) => {
     connection.query(query, [seasonId,leagueId], (err, data) => {
+      if (err) {
+        console.error("Error fetching unplayed matches:", err);
+        reject(err);
+      } else {
+       // console.log(data)
+        resolve(data);
+      }
+    });
+  });
+}
+function getStandingsperleague(seasonId,league_id) {
+  const query = `
+ SELECT p.name,standings.position,standings.points,standings.netgameswon,standings.matches_played,standings.num_of_penalty,l.name as liga FROM standings 
+ JOIN players_season ps 
+        ON standings.player = ps.id 
+       JOIN players p 
+        ON ps.player_id = p.id
+        join leagues l on ps.league_id=l.id
+          WHERE ps.league_id=? and ps.season_id=?
+      ORDER BY standings.position ASC
+  `;
+
+  return new Promise((resolve, reject) => {
+    connection.query(query, [seasonId,league_id], (err, data) => {
+      if (err) {
+        console.error("Error fetching unplayed matches:", err);
+        reject(err);
+      } else {
+       // console.log(data)
+        resolve(data);
+      }
+    });
+  });
+}
+function getUnplayedMatchesmoški(seasonId) {
+  const query = `
+   SELECT
+  s.id,
+  ps_home.player_id AS home_player_id,
+  hp.name AS home_player,
+  ps_away.player_id AS away_player_id,
+  ap.name AS away_player,
+  s.result,
+  ps_home.league_id,
+  s.week,
+  s.deadline,
+  s.home_player AS home_player_s_id,
+  s.away_player AS away_player_s_id,
+  l.name
+FROM schedule s
+JOIN players_season ps_home ON s.home_player = ps_home.id
+JOIN players hp ON ps_home.player_id = hp.id
+JOIN players_season ps_away ON s.away_player = ps_away.id
+JOIN players ap ON ps_away.player_id = ap.id
+JOIN leagues l on ps_home.league_id=l.id
+WHERE s.result = "No result"
+  AND ps_home.season_id = ?
+  AND s.deadline < (UNIX_TIMESTAMP()*1000 + 7 * 24 * 60 * 60*1000)
+  and ps_home.league_id!=6
+ORDER BY s.week ASC;
+  `;
+
+  return new Promise((resolve, reject) => {
+    connection.query(query, [seasonId], (err, data) => {
+      if (err) {
+        console.error("Error fetching unplayed matches:", err);
+        reject(err);
+      } else {
+       // console.log(data)
+        resolve(data);
+      }
+    });
+  });
+}
+function getUnplayedMatchesženske(seasonId) {
+  const query = `
+   SELECT
+  s.id,
+  ps_home.player_id AS home_player_id,
+  hp.name AS home_player,
+  ps_away.player_id AS away_player_id,
+  ap.name AS away_player,
+  s.result,
+  ps_home.league_id,
+  s.week,
+  s.deadline,
+  s.home_player AS home_player_s_id,
+  s.away_player AS away_player_s_id,
+  l.name
+FROM schedule s
+JOIN players_season ps_home ON s.home_player = ps_home.id
+JOIN players hp ON ps_home.player_id = hp.id
+JOIN players_season ps_away ON s.away_player = ps_away.id
+JOIN players ap ON ps_away.player_id = ap.id
+JOIN leagues l on ps_home.league_id=l.id
+WHERE s.result = "No result"
+  AND ps_home.season_id = ?
+  AND s.deadline < (UNIX_TIMESTAMP()*1000 + 7 * 24 * 60 * 60*1000)
+  and ps_home.league_id=6
+  and (hp.name!='prosta' and ap.name!='prosta')
+
+ORDER BY s.week ASC;
+  `;
+
+  return new Promise((resolve, reject) => {
+    connection.query(query, [seasonId], (err, data) => {
       if (err) {
         console.error("Error fetching unplayed matches:", err);
         reject(err);
@@ -401,7 +648,7 @@ async function getLeaguesWithUnplayedMatches(seasonid) {
     JOIN leagues l ON ps_home.league_id = l.id
     WHERE s.result = "No result"
       AND ps_home.season_id = ?
-      AND s.deadline < (UNIX_TIMESTAMP() * 1000 + 0 * 24 * 60 * 60 * 1000)
+      AND s.deadline < (UNIX_TIMESTAMP() * 1000 + 7 * 24 * 60 * 60 * 1000)
     ORDER BY ps_home.league_id ASC
   `;
   return new Promise((resolve, reject) => {
@@ -416,21 +663,52 @@ async function getLeaguesWithUnplayedMatches(seasonid) {
     });
   });
 }
-
-async function generateReportsForAllLeagues(seasonid) {
+async function getLeaguesWithUnplayedMatchesmoški(seasonid) {
+  const query = `
+    SELECT DISTINCT ps_home.league_id AS league_id, l.name
+    FROM schedule s
+    JOIN players_season ps_home ON s.home_player = ps_home.id
+    JOIN players_season ps_away ON s.away_player = ps_away.id
+    JOIN leagues l ON ps_home.league_id = l.id
+    WHERE s.result = "No result"
+      AND ps_home.season_id = ?
+      AND s.deadline < (UNIX_TIMESTAMP() * 1000 + 0 * 24 * 60 * 60 * 1000)
+      and ps_home.league_id!=6
+    ORDER BY ps_home.league_id ASC
+  `;
+  return new Promise((resolve, reject) => {
+    connection.query(query, [seasonid], (err, data) => {
+      if (err) {
+        console.error("Error fetching unplayed matches:", err);
+        reject(err);
+      } else {
+        //console.log(data)
+        resolve(data);
+      }
+    });
+  });
+}
+async function generatepdfmenunplayed(seasonid,league,filelocation) {
   try {
+    let matches=[]
    // const leagues = await getLeaguesWithUnplayedMatches(seasonid);
    // console.log(leagues)
    // for (const league of leagues) {
      // const leagueId = league.league_id;
      // const matches = await getUnplayedMatches(seasonid, leagueId);
-      const matches = await getUnplayedMatches(seasonid);
+     if(league=="m"){
+       matches = await getUnplayedMatchesmoški(seasonid);
+     }else{
+  matches = await getUnplayedMatchesženske(seasonid);
+     }
+      
+      console.log(matches)
       if (matches.length > 0) {
-        await generateStyledPdf(
+        await generateunplayedmatchespdfthatarepastdeadline(
           matches,
           path.join(__dirname, 'logo.png'),
-          'result',
-         // leagueId
+          league,
+          filelocation
         );
         //console.log(`✅ Report generated for league ${leagueId}`);
       } else {
@@ -442,12 +720,179 @@ async function generateReportsForAllLeagues(seasonid) {
   }
 }
 
-generateReportsForAllLeagues(4);
+async function pdfstandings(filelocation,league_id) {
+  try {
+    let matches=[]
+   // const leagues = await getLeaguesWithUnplayedMatches(seasonid);
+   // console.log(leagues)
+   // for (const league of leagues) {
+     // const leagueId = league.league_id;
+     // const matches = await getUnplayedMatches(seasonid, leagueId);
+    
+       matches = await getStandingsperleague(league_id,4);
+    
+      
+     
+      if (matches.length > 0) {
+       // console.log(matches)
+        await generatepdfstandings(
+          matches,
+          path.join(__dirname, 'logo.png'),
+          filelocation
+        );
+        //console.log(`✅ Report generated for league ${leagueId}`);
+      } else {
+        console.log(`ℹ️ No matches to report for league ${leagueId}`);
+      }
+   // }
+  } catch (err) {
+    console.error('❌ Failed to generate reports:', err);
+  }
+}
+
+
+
+// generatepdfmenunplayed(4,"m","Neodigrane moške tekme");
+// generatepdfmenunplayed(4,"ž","Neodigrane ženske tekme");
+
+
 
 app.get("/deadline", async (req, res) => {
-  updateScheduleWithDates();
+  generatepdfmenunplayed(4,"m","Neodigrane moške tekme");
+generatepdfmenunplayed(4,"ž","Neodigrane ženske tekme");
+pdfstandings("prva_liga_razvrstitev",1)
+pdfstandings("druga_liga_razvrstitev",2)
+pdfstandings("tretja_liga_razvrstitev",3)
+pdfstandings("cetrta_liga_razvrstitev",4)
+pdfstandings("ženska_liga_razvrstitev",6)
+await sendEmail("krizaniczan@gmail.com", "<p>Neodigrane tekme</p>","neodigrane tekme ženska liga", ["Neodigrane ženske tekme.pdf"]);
+await sendEmail("krizaniczan@gmail.com", "<p>Neodigrane tekme.</p>","neodigrane tekme moška liga", ["Neodigrane moške tekme.pdf"]);
+await sendEmail("krizaniczan@gmail.com", "<p>Razvrstitve lig.</p>","Razvrstitve lig", ["prva_liga_razvrstitev.pdf","cetrta_liga_razvrstitev.pdf","ženska_liga_razvrstitev.pdf"]);
+  //updateScheduleWithDates();
   res.json(true);
 });
+
+
+
+
+
+
+
+async function generatepdfstandings(dataSource, logoPath, filelocation) {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontSize = 12;
+  let page = pdfDoc.addPage([595, 842]); // A4 size
+  const pageWidth = page.getWidth();
+  let currentY = 730;
+
+  pdfDoc.registerFontkit(fontkit);
+
+  const fontBytes = fs.readFileSync(path.join(__dirname, 'fonts/DejaVuSans.ttf'));
+  const customFont = await pdfDoc.embedFont(fontBytes);
+
+  const logoBytes = fs.readFileSync(logoPath);
+  const logoImage = await pdfDoc.embedPng(logoBytes);
+  const logoDims = logoImage.scale(0.60);
+
+  const drawText = (text, x, y, options = {}) => {
+    page.drawText(text, {
+      x,
+      y,
+      size: options.size || fontSize,
+      color: options.color || rgb(0, 0, 0),
+      font: customFont
+    });
+  };
+
+  const drawRect = (x, y, w, h, color) => {
+    page.drawRectangle({ x, y, width: w, height: h, color });
+  };
+
+  // Draw logo
+  page.drawImage(logoImage, {
+    x: pageWidth - logoDims.width - 20,
+    y: currentY,
+    width: logoDims.width,
+    height: logoDims.height
+  });
+
+  const titleText = "Razvrstitve "+dataSource[0].liga;
+  const options = {
+  weekday: 'long',   // full day name like "sobota"
+  day: 'numeric',    // day number, e.g. 21
+  month: 'long',     // full month name like "september"
+  year: 'numeric'    // year number
+};
+
+// Use Slovak locale 'sk-SK'
+const formatted = new Intl.DateTimeFormat('sl-si', options).format(new Date());
+  const textWidth = font.widthOfTextAtSize(titleText, 24);
+  drawText(titleText, (pageWidth - textWidth) / 2, 770, {
+    size: 24,
+    color: rgb(0, 0.38, 0.18)
+  });
+  drawText(formatted, (pageWidth - textWidth) / 2, 750, {
+    size: 12,
+    color: rgb(0, 0.38, 0.18)
+  });
+
+  // Section title
+  // currentY -= 30;
+  // drawText(dataSource[0].liga, 50, currentY, {
+  //   size: 12,
+  //   color: rgb(0, 0.38, 0.18)
+  // });
+  currentY -= 20;
+
+  const headers = ['Pozicija', 'Igralec', 'Točke', 'Igre', 'Odigrana kola', 'Kazenske točke'];
+  const widths = [60, 150, 60, 60, 100, 100];
+
+  const drawTableRow = (row, y, bgColor = null, textColor = rgb(0, 0, 0)) => {
+    let x = 50;
+    row.forEach((cell, i) => {
+      const w = widths[i];
+      if (bgColor) drawRect(x - 2, y - 2, w, 16, bgColor);
+      drawText(String(cell), x, y, { size: fontSize, color: textColor });
+      x += w;
+    });
+  };
+
+  // Draw table header
+  drawTableRow(headers, currentY, rgb(0, 0.38, 0.18), rgb(1, 1, 1));
+  currentY -= 20;
+
+  // Draw player rows
+  dataSource.forEach((match, i) => {
+    const row = [
+      match.position,
+      match.name,
+      match.points,
+      match.netgameswon,
+      match.matches_played,
+      match.num_of_penalty
+    ];
+
+    const stripeColor = i % 2 === 0 ? rgb(0.95, 0.95, 0.95) : null;
+    drawTableRow(row, currentY, stripeColor);
+    currentY -= 18;
+
+    if (currentY < 60) {
+      page = pdfDoc.addPage([595, 842]);
+      currentY = 780;
+    }
+  });
+
+  const pdfBytes = await pdfDoc.save();
+  fs.writeFileSync(filelocation + ".pdf", pdfBytes);
+  console.log('✅ PDF saved as ' + filelocation + ".pdf");
+}
+
+
+
+
+
+
 app.get("/getSeasons", async (req, res) => {
   const query = `
     SELECT 
@@ -466,7 +911,7 @@ app.get("/getSeasons", async (req, res) => {
     res.json(results);
   });
 });
-async function sendEmail(usermail,sporocilo) {
+async function sendEmail(usermail,sporocilo,subject,attachmentPath) {
   try {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -479,8 +924,12 @@ async function sendEmail(usermail,sporocilo) {
     const message = {
       from: 'krizaniczan@gmail.com',
       to: usermail,
-      subject: 'Welcome to Tennis!',
+       subject: subject,
       html: sporocilo,
+   attachments: attachmentPath.map(filePath => ({
+  filename: path.basename(filePath),
+  path: filePath
+}))
     };
 
     const info = await transporter.sendMail(message);
@@ -1713,8 +2162,8 @@ app.get("/standings/:id", (req, res) => {
 
 app.post("/update-match-result", verifyToken("user,admin"), (req, res) => {
   const { id, result } = req.body;
-  const userId = req.user?.id;
-  const role = req.user?.role;
+  const userId = req.user.id;
+  const role = req.user.role;
 
   if (!id || !result) {
     return res.status(400).json({ error: "Missing match ID or result" });
