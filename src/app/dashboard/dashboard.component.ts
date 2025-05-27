@@ -100,7 +100,7 @@ this.pendingResultsMatches = this.matches.filter(match => {
     );
   }
   isAwayPlayer(match: any): boolean {
-   console.log(this.AuthService.getUserId() == match.user_id,this.AuthService.getUserId() ,match.away_player_id)
+ 
     // Compare the current user's username with the away_player field
     return this.AuthService.getUserId() == match.user_id;
   }

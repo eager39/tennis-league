@@ -1,0 +1,13 @@
+<div>
+    <!-- <button (click)="sendpdf()">Pošlji PDF</button> -->
+   <h2>Razvrstitve</h2>
+<button (click)="downloadpdf('prva_liga_razvrstitev.pdf',1)"> Prva Liga </button>
+<button (click)="downloadpdf('druga_liga_razvrstitev.pdf',2)"> Druga Liga</button>
+<button (click)="downloadpdf('tretja_liga_razvrstitev.pdf',3)"> Tretja Liga</button>
+<button (click)="downloadpdf('cetrta_liga_razvrstitev.pdf',4)"> Četrta Liga</button>
+<button (click)="downloadpdf('zenska_liga_razvrstitev.pdf',6)"> Ženska Liga</button>
+<h2>Neodigrane tekme</h2>
+<button (click)="downloadpdf('Neodigrane moske tekme.pdf',6)"> moške tekme</button>
+<button (click)="downloadpdf('Neodigrane zenske tekme.pdf',6)"> zenske tekme</button>
+    <!-- <li *ngFor="let user of users">{{user.email}}</li> -->
+</div>

@@ -27,7 +27,7 @@
       </mat-select>
     </mat-form-field>
   </div>
-  <button (click)="removeAllMatches()" *ngIf="AuthService.isAuthenticated() && AuthService.hasRole('admin')">Izbriši vse tekme</button>
+  <!-- <button (click)="removeAllMatches()" *ngIf="AuthService.isAuthenticated() && AuthService.hasRole('admin')">Izbriši vse tekme</button> -->
 
 <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
   <ng-container matColumnDef="week">

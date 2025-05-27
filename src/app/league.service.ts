@@ -15,6 +15,25 @@ export class LeaguesService {
   getLeagues(): Observable<any[]> {
     return this.http.get<any[]>(`${environment.apiUrl}/leagues`);
   }
+// sendpdfs(emails: string[]): Observable<Blob> {
+//   return this.http.post('https://localhost:8443/deadline', { emails }, {
+//     responseType: 'blob'
+//   });
+// }
+// For sending emails only
+sendpdf(emails: string[]): Observable<any> {
+  return this.http.post('https://localhost:8443/send-emails', { emails });
+}
+
+// For downloading a specific file
+downloadFile(fileName: string, league: number): Observable<Blob> {
+  return this.http.get(`https://localhost:8443/download/${fileName}/${league}`, {
+    responseType: 'blob'
+  });
+}
+  getEmails(): Observable<any> {
+    return this.http.get(`${environment.apiUrl+"/getPlayerEmails"}`);
+  }
 
   getPlayersByLeague(leagueId: string): Observable<any> {
     return this.http.get(`${environment.apiUrl}/leagues/${leagueId}/players`);

@@ -1,5 +1,5 @@
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
-
+backend/.pdf
 # Compiled output
 /dist
 /tmp
@@ -57,3 +57,4 @@ backend/4_kolo_objava.pdf
 backend/3_kolo_objava.pdf
 backend/2_kolo_objava.pdf
 
+backend/asd.pdf

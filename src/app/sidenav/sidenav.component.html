@@ -21,6 +21,8 @@
             <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin'))" routerLink="manageusers">Upravljaj uporabnike in igralce<span></span></app-sidenav-link>
             <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin'))" routerLink="manageleague">Liga<span></span></app-sidenav-link>
             <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin')) && filteredSeasons[0]?.draw==0" routerLink="leaguedraw">Žreb<span></span></app-sidenav-link>
+            <app-sidenav-link *ngIf="(authService.isAuthenticated()&& authService.hasRole('admin')) " routerLink="mailing">Obvestila<span></span></app-sidenav-link>
+
           </mat-expansion-panel>
           
           <mat-expansion-panel>

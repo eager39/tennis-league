@@ -203,12 +203,12 @@ async function generateStyledPdf(dataSource, logoPath) {
   };
 
   const grouped = groupByWeek(dataSource);
-  page.drawImage(logoImage, {
-    x: pageWidth - logoDims.width - 20,
-    y: currentY,
-    width: logoDims.width,
-    height: logoDims.height
-  });
+  // page.drawImage(logoImage, {
+  //   x: pageWidth - logoDims.width - 20,
+  //   y: currentY,
+  //   width: logoDims.width,
+  //   height: logoDims.height
+  // });
   for (const [week, matches] of grouped) {
     // Filter if in result mode
     const filtered = option === 'result'
@@ -702,7 +702,7 @@ async function generatepdfmenunplayed(seasonid,league,filelocation) {
   matches = await getUnplayedMatchesženske(seasonid);
      }
       
-      console.log(matches)
+    
       if (matches.length > 0) {
         await generateunplayedmatchespdfthatarepastdeadline(
           matches,
@@ -734,7 +734,7 @@ async function pdfstandings(filelocation,league_id) {
       
      
       if (matches.length > 0) {
-       // console.log(matches)
+      
         await generatepdfstandings(
           matches,
           path.join(__dirname, 'logo.png'),
@@ -756,21 +756,157 @@ async function pdfstandings(filelocation,league_id) {
 // generatepdfmenunplayed(4,"ž","Neodigrane ženske tekme");
 
 
+async function safeSendEmail(to, htmlContent, subject, filePaths) {
+  const validAttachments = filePaths
+    .filter(file => fs.existsSync(file)) // Check if file exists
+    .map(file => ({
+      filename: path.basename(file),
+      path:file
+    }));
+console.log(validAttachments.length )
+  if (validAttachments.length === 0) {
 
-app.get("/deadline", async (req, res) => {
-  generatepdfmenunplayed(4,"m","Neodigrane moške tekme");
-generatepdfmenunplayed(4,"ž","Neodigrane ženske tekme");
-pdfstandings("prva_liga_razvrstitev",1)
-pdfstandings("druga_liga_razvrstitev",2)
-pdfstandings("tretja_liga_razvrstitev",3)
-pdfstandings("cetrta_liga_razvrstitev",4)
-pdfstandings("ženska_liga_razvrstitev",6)
-await sendEmail("krizaniczan@gmail.com", "<p>Neodigrane tekme</p>","neodigrane tekme ženska liga", ["Neodigrane ženske tekme.pdf"]);
-await sendEmail("krizaniczan@gmail.com", "<p>Neodigrane tekme.</p>","neodigrane tekme moška liga", ["Neodigrane moške tekme.pdf"]);
-await sendEmail("krizaniczan@gmail.com", "<p>Razvrstitve lig.</p>","Razvrstitve lig", ["prva_liga_razvrstitev.pdf","cetrta_liga_razvrstitev.pdf","ženska_liga_razvrstitev.pdf"]);
-  //updateScheduleWithDates();
-  res.json(true);
+    console.log(`Skipped sending "${subject}" — no valid attachments.`);
+    return;
+  }
+  
+
+  await sendEmail(to, htmlContent, subject, validAttachments);
+}
+
+const allowedFiles = [
+  "prva_liga_razvrstitev.pdf",
+  "druga_liga_razvrstitev.pdf",
+  "tretja_liga_razvrstitev.pdf",
+  "cetrta_liga_razvrstitev.pdf",
+  "zenska_liga_razvrstitev.pdf",
+  "Neodigrane zenske tekme.pdf",
+  "Neodigrane moske tekme.pdf"
+
+];
+
+app.get("/download/:fileName/:league", async (req, res) => { 
+   const { fileName } = req.params;
+//     generatepdfmenunplayed(4,"m","Neodigrane moške tekme");
+//  generatepdfmenunplayed(4,"ž","Neodigrane ženske tekme");
+//  pdfstandings("prva_liga_razvrstitev",1)
+//  pdfstandings("druga_liga_razvrstitev",2)
+//  pdfstandings("tretja_liga_razvrstitev",3)
+//  pdfstandings("cetrta_liga_razvrstitev",4)
+switch (fileName) {
+  case "Neodigrane moske tekme.pdf":
+    await generatepdfmenunplayed(4,"m","Neodigrane moske tekme");
+    break;
+  case "Neodigrane zenske tekme.pdf":
+ await generatepdfmenunplayed(4,"ž","Neodigrane zenske tekme");
+    break;
+  case "prva_liga_razvrstitev.pdf":
+  await pdfstandings("prva_liga_razvrstitev",1)
+    break;
+     case "druga_liga_razvrstitev.pdf":  
+await pdfstandings("druga_liga_razvrstitev",2)
+    break;
+      case "tretja_liga_razvrstitev.pdf":
+ await pdfstandings("tretja_liga_razvrstitev",3)
+    break;
+      case "cetrta_liga_razvrstitev.pdf":
+ await pdfstandings("cetrta_liga_razvrstitev",4)
+    break;
+      case "zenska_liga_razvrstitev.pdf":
+await pdfstandings("zenska_liga_razvrstitev",6)
+    break;
+  
+}
+
+ 
+
+  if (!allowedFiles.includes(fileName)) {
+    return res.status(400).send("Invalid file request");
+  }
+
+  const filePath = path.join(__dirname, fileName);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("File not found");
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
+
+  const stream = fs.createReadStream(filePath);
+  stream.pipe(res);
+
+  stream.on("error", (err) => {
+    console.error("Stream error:", err);
+    res.status(500).end();
+  });
 });
+
+app.post("/deadline", async (req, res) => {
+console.log(req.body.emails)
+  generatepdfmenunplayed(4,"m","Neodigrane moške tekme");
+ generatepdfmenunplayed(4,"ž","Neodigrane ženske tekme");
+ pdfstandings("prva_liga_razvrstitev",1)
+ pdfstandings("druga_liga_razvrstitev",2)
+ pdfstandings("tretja_liga_razvrstitev",3)
+ pdfstandings("cetrta_liga_razvrstitev",4)
+ pdfstandings("zenska_liga_razvrstitev",6)
+
+  
+await safeSendEmail("krizaniczan@gmail.com", "<p>Neodigrane tekme</p>", "neodigrane tekme zenska liga", ["Neodigrane zenske tekme.pdf"]);
+
+await safeSendEmail("krizaniczan@gmail.com", "<p>Neodigrane tekme.</p>", "neodigrane tekme moska liga", ["Neodigrane moske tekme.pdf"]);
+
+await safeSendEmail(
+  "krizaniczan@gmail.com",
+  "<p>Razvrstitve lig.</p>",
+  "Razvrstitve lig",
+  [
+    "prva_liga_razvrstitev.pdf",
+    "tretja_liga_razvrstitev.pdf",
+    "druga_liga_razvrstitev.pdf",
+    "cetrta_liga_razvrstitev.pdf",
+    "ženska_liga_razvrstitev.pdf"
+  ]
+);
+  updateScheduleWithDates();
+ res.json(true);
+});
+async function sendEmail(usermail,sporocilo,subject,attachmentPath) {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.Gmailuser, // Your Gmail address
+        pass: process.env.Gmailpass  // Your Gmail password
+      }
+    });
+   
+console.log(attachmentPath)
+    const message = {
+      from: 'krizaniczan@gmail.com',
+      bcc: usermail,
+       subject: subject,
+      html: sporocilo,
+     attachments: attachmentPath
+    };
+    
+
+    const info = await transporter.sendMail(message);
+
+    console.log("Email sent:", info.messageId);
+    console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+
+    return {
+      msg: "Email sent successfully",
+      info: info.messageId,
+      preview: nodemailer.getTestMessageUrl(info),
+    };
+  } catch (error) {
+    console.error("Email sending failed:", error);
+    return { msg: "Email sending failed", error: error.message };
+  }
+}
 
 
 
@@ -809,7 +945,7 @@ async function generatepdfstandings(dataSource, logoPath, filelocation) {
     page.drawRectangle({ x, y, width: w, height: h, color });
   };
 
-  // Draw logo
+  //Draw logo
   page.drawImage(logoImage, {
     x: pageWidth - logoDims.width - 20,
     y: currentY,
@@ -911,42 +1047,50 @@ app.get("/getSeasons", async (req, res) => {
     res.json(results);
   });
 });
-async function sendEmail(usermail,sporocilo,subject,attachmentPath) {
-  try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.Gmailuser, // Your Gmail address
-        pass: process.env.Gmailpass  // Your Gmail password
-      }
-    });
+app.get("/getPlayerEmails", async (req, res) => {
+   const season = req.headers.season;
 
-    const message = {
-      from: 'krizaniczan@gmail.com',
-      to: usermail,
-       subject: subject,
-      html: sporocilo,
-   attachments: attachmentPath.map(filePath => ({
-  filename: path.basename(filePath),
-  path: filePath
-}))
-    };
+  // Updated query to fetch player details from both players_season and players tables
+  const query = `
+     SELECT 
+  p.name,p.email
+FROM 
+    players_season ps
 
-    const info = await transporter.sendMail(message);
+JOIN 
+    players p ON ps.player_id = p.id
 
-    console.log("Email sent:", info.messageId);
-    console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+	
+ 
+WHERE 
+    ps.league_id!=6
+    AND ps.season_id = ?
+    and p.email!=''
+    order by ps.league_id asc,p.name asc
+`;
+      
 
-    return {
-      msg: "Email sent successfully",
-      info: info.messageId,
-      preview: nodemailer.getTestMessageUrl(info),
-    };
-  } catch (error) {
-    console.error("Email sending failed:", error);
-    return { msg: "Email sending failed", error: error.message };
-  }
-}
+  // Execute query with the userid and season passed for both home and away players
+  connection.query(query, [season], (err, data) => {
+    if (err) {
+      console.error("Error fetching matches:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while fetching matches" });
+      return;
+    }
+
+    // Return the data or message if no matches found
+    if (data.length == 0) {
+      res.json({ message: "No matches found in the league for the user." });
+    } else {
+        console.log(data)
+      res.json(data);
+    }
+  
+  
+});
+})
 
 app.get("/getMyMatches",verifyToken("user"), (req, res) => {
 
@@ -955,7 +1099,8 @@ app.get("/getMyMatches",verifyToken("user"), (req, res) => {
 console.log(userid)
   // Updated query to fetch player details from both players_season and players tables
   const query = `
-      SELECT *, 
+   SELECT 
+   *,
     s.id,
     ps_home.player_id AS home_player_id,
     hp.name AS home_player,
@@ -964,7 +1109,11 @@ console.log(userid)
     s.result,
     ps_home.league_id,
     s.week,
-    s.deadline
+    s.deadline,
+    CASE 
+        WHEN hp.user_id = ? THEN ap.phone
+        ELSE hp.phone
+    END AS phone_away
 FROM 
     schedule s
 JOIN 
@@ -976,14 +1125,14 @@ JOIN
 JOIN 
     players ap ON ps_away.player_id = ap.id
 WHERE 
-    (hp.user_id=? or ap.user_id=?)
+    (hp.user_id = ? OR ap.user_id = ?)
     AND ps_home.season_id = ?
 ORDER BY 
     s.week;
         `;
 
   // Execute query with the userid and season passed for both home and away players
-  connection.query(query, [userid, userid, season], (err, data) => {
+  connection.query(query, [userid,userid, userid, season], (err, data) => {
     if (err) {
       console.error("Error fetching matches:", err);
       res
@@ -2171,7 +2320,7 @@ app.post("/update-match-result", verifyToken("user,admin"), (req, res) => {
 
   // First, fetch the match to validate ownership
   const checkQuery = `
-   SELECT p.id
+   SELECT p.user_id
     FROM schedule s
     JOIN players_season ps_home ON s.home_player = ps_home.id
   	join players p on ps_home.player_id=p.id
@@ -2189,9 +2338,9 @@ app.post("/update-match-result", verifyToken("user,admin"), (req, res) => {
     }
 
     const match = results[0];
-    console.log( match.id +"vs "+ userId)
+   
     // Check if the user is the home player or has admin role
-    if (role !== "admin" && match.id !== userId) {
+    if (role !== "admin" && match.user_id !== userId) {
       return res.status(403).json({ error: "Unauthorized to update this match" });
     }
 

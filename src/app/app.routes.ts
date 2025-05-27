@@ -12,6 +12,7 @@ import { ManageUsersComponent } from './manage-users/manage-users.component';
 import { ManageleagueComponent } from './manageleague/manageleague.component';
 import { LeaguesignupComponent } from './leaguesignup/leaguesignup.component';
 import { LeaguedrawComponent } from './leaguedraw/leaguedraw.component';
+import { MailingComponent } from './mailing/mailing.component';
 export const routes: Routes = [
   { path: '', component: HomeComponent },
   { path: 'players/:id', component: PlayersComponent },
@@ -25,5 +26,6 @@ export const routes: Routes = [
   { path: 'dashboardadmin', component: DashboardadminComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }},
   { path: 'manageusers', component: ManageUsersComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }},
   { path: 'manageleague', component: ManageleagueComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }},
-  { path: 'leaguedraw', component: LeaguedrawComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }}
+  { path: 'leaguedraw', component: LeaguedrawComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }},
+  { path: 'mailing', component: MailingComponent ,canActivate:[RoleGuard],data: { roles: ['admin'] }}
 ];
