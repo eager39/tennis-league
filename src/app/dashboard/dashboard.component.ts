@@ -24,6 +24,7 @@ import { MatButtonModule } from '@angular/material/button';
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent {
+  @ViewChild('resultInput') resultInput!: ElementRef;
   matches: any[] = [];
   upcomingMatches: any[] = [];
   finishedMatches: any[] = [];
@@ -116,6 +117,23 @@ this.pendingResultsMatches = this.matches.filter(match => {
    }
     
   }
+  formatResultInput(event: Event): void {
+    
+  const input = event.target as HTMLInputElement;
+  let raw = input.value.replace(/[^0-9]/g, ''); // Keep only digits
+
+  let formatted = '';
+  for (let i = 0; i < raw.length; i += 2) {
+    if (i > 0) formatted += ','; // separate sets with comma
+    formatted += raw[i];
+    if (i + 1 < raw.length) {
+      formatted += '-' + raw[i + 1];
+    }
+  }
+
+  input.value = formatted;
+  this.resultForm.controls['newResult'].setValue(formatted, { emitEvent: false });
+}
   forfeitMatch(match:any): void {
     let result=''
     if(match.home_player_id==this.AuthService.getUserId()){
@@ -141,7 +159,7 @@ this.pendingResultsMatches = this.matches.filter(match => {
   league_id: number =99;
   
   hideNoResults: boolean = false;
-  @ViewChild('resultInput') resultInput!: ElementRef;
+  
  
   resultForm: FormGroup;
   editingMatch: any = null;

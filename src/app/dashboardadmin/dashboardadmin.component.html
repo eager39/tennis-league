@@ -27,7 +27,7 @@
 </div>
 
 
-<table *ngIf="dataSource.filteredData.length>=1 " mat-table [dataSource]="dataSource" class="mat-elevation-z8" >
+<table *ngIf="dataSource.filteredData.length>=1 " mat-table [dataSource]="dataSource" class="mat-elevation-z8" multiTemplateDataRows >
   <ng-container matColumnDef="week">
     <th mat-header-cell *matHeaderCellDef> Week </th>
     <td mat-cell *matCellDef="let match"> {{ match.week }} </td>
@@ -51,7 +51,7 @@
         (dblclick)="editResult(match) ">{{match.result}}</span>
       <div *ngIf="editingMatch == match">
         <form [formGroup]="resultForm" (ngSubmit)="updateResult(match.id)" (focusout)="onFocusOut($event)">
-          <input #resultInput matInput formControlName="newResult" placeholder="Enter result (e.g., 6-4, 4-6, 6-3)"
+          <input #resultInput matInput formControlName="newResult" (input)="formatResultInput($event)" placeholder="Enter result (e.g., 6-4, 4-6, 6-3)"
             required />
           <button mat-button type="submit"
             [disabled]="resultForm.controls['newResult'].errors?.['invalidTennisScore']">Update</button>
@@ -72,6 +72,7 @@
     <th mat-header-cell *matHeaderCellDef> Rok za tekmo </th>
     <td mat-cell *matCellDef="let match"> {{ match.deadline| date: 'dd-MM-yyyy' }} </td>
   </ng-container>
+   
   <ng-container matColumnDef="penalty">
     <th mat-header-cell *matHeaderCellDef> Kazenska točka </th>
     <td mat-cell *matCellDef="let match">
@@ -86,11 +87,32 @@
         (click)="penalty(match.away_player_s_id, match.id)">
         {{ match.away_player }}
       </span>
+     
     </td>
   </ng-container>
-
-  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+ <!-- <ng-container matColumnDef="comment">
+    <th mat-header-cell *matHeaderCellDef> Komentar </th>
+    <td mat-cell *matCellDef="let match"> Dodaj komentar </td>
+  </ng-container> -->
+    <ng-container matColumnDef="expandedDetail">
+    <td mat-cell *matCellDef="let element" [attr.colspan]="displayedColumns.length">
+      <div
+        class="example-element-detail"
+        *ngIf="isRowExpanded(element)"
+        [@detailExpand]="isRowExpanded(element) ? 'expanded' : 'collapsed'">
+         <form [formGroup]="comment" (ngSubmit)="updateComment(element.id)" (focusout)="onFocusOut($event)">
+          <textarea #resultInput matInput formControlName="comment"   placeholder="Vnesi komentar"
+            required > {{element.admin_comment}}</textarea>
+          <button mat-button type="submit"
+            [disabled]="comment.controls['comment'].errors">Update</button>
+        </form>
+       
+      </div>
+    </td>
+  </ng-container>
+  <tr mat-header-row *matHeaderRowDef="displayedColumns" ></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns; "(click)="toggleRowExpansion(row)" ></tr>
+   <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="example-element-detail-row"></tr>
 </table>
 
 <mat-paginator *ngIf="dataSource.filteredData.length>1 " #paginator1 [pageSize]="8" showFirstLastButtons ></mat-paginator>

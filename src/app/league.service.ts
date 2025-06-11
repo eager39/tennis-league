@@ -22,12 +22,12 @@ export class LeaguesService {
 // }
 // For sending emails only
 sendpdf(emails: string[]): Observable<any> {
-  return this.http.post('https://localhost:8443/send-emails', { emails });
+  return this.http.post(environment.apiUrl+"/send-emails", { emails });
 }
 
 // For downloading a specific file
 downloadFile(fileName: string, league: number): Observable<Blob> {
-  return this.http.get(`https://localhost:8443/download/${fileName}/${league}`, {
+  return this.http.get(`${environment.apiUrl}/download/${fileName}/${league}`, {
     responseType: 'blob'
   });
 }

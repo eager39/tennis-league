@@ -9,23 +9,51 @@
   </mat-form-field> -->
 
   <div>
-    <label for="playerFilter">Filter igralcev:</label>
+
+    <mat-form-field appearance="fill">
+  <mat-label>Izberi igralca</mat-label>
+  <input type="text"
+         matInput
+         [formControl]="playerFilterControl"
+         [matAutocomplete]="playerAuto">
+  <mat-autocomplete #playerAuto="matAutocomplete" [displayWith]="displayFn">
+    <mat-option value="">Vsi igralci</mat-option>
+    <mat-option *ngFor="let player of filteredPlayers" [value]="player">
+      {{ player}}
+    </mat-option>
+  </mat-autocomplete>
+</mat-form-field>
+    <!-- <label for="playerFilter">Filter igralcev:</label>
     <mat-form-field appearance="fill">
       <mat-label>Izberi igralca</mat-label>
       <mat-select id="playerFilter" [(ngModel)]="selectedPlayer" (ngModelChange)="filterMatches()">
+        
         <mat-option value="">Vsi igralci</mat-option>
         <mat-option *ngFor="let player of players" [value]="player">{{ player }}</mat-option>
       </mat-select>
-    </mat-form-field>
+    </mat-form-field> -->
   
-    <label for="weekFilter">Filter kol:</label>
+    <!-- <label for="weekFilter">Filter kol:</label>
     <mat-form-field appearance="fill">
       <mat-label>Izberi kolo</mat-label>
       <mat-select id="weekFilter" [(ngModel)]="selectedWeek" (ngModelChange)="filterMatches()">
         <mat-option value="">Vsa kola</mat-option>
         <mat-option *ngFor="let week of weeks" [value]="week">{{ week }}</mat-option>
       </mat-select>
-    </mat-form-field>
+    </mat-form-field> -->
+        <mat-form-field appearance="fill">
+  <mat-label>Izberi kolo</mat-label>
+  <input type="text"
+         matInput
+         [formControl]="weekFilterControl"
+         [matAutocomplete]="weekAuto">
+  <mat-autocomplete #weekAuto="matAutocomplete" [displayWith]="displayFn">
+    <mat-option value="">Vsa Kola</mat-option>
+    <mat-option *ngFor="let week of filteredWeeks" [value]="week">
+      {{ week }}
+    </mat-option>
+  </mat-autocomplete>
+</mat-form-field>
   </div>
   <!-- <button (click)="removeAllMatches()" *ngIf="AuthService.isAuthenticated() && AuthService.hasRole('admin')">Izbriši vse tekme</button> -->
 
@@ -52,7 +80,14 @@
       <span  *ngIf="(editingMatch !== match && checkNames(match.home_player))"  >{{match.result}} <mat-icon (click)="editResult(match) " aria-hidden="false" aria-label="Example home icon" fontIcon="edit"></mat-icon></span>
       <div *ngIf="editingMatch === match">
         <form [formGroup]="resultForm" (ngSubmit)="updateResult(match.id)" (focusout)="onFocusOut($event)">
-          <input #resultInput matInput formControlName="newResult"  placeholder="Enter result (e.g., 6-4, 4-6, 6-3)" required />
+         <input 
+  #resultInput 
+  matInput 
+  formControlName="newResult"  
+  placeholder="Enter result (e.g., 6-4, 4-6, 6-3)" 
+  required 
+  (input)="formatResultInput($event)"
+/>
           <button mat-button type="submit" [disabled]="resultForm.invalid">Update</button>
         </form>
         <div *ngIf="resultForm.controls['newResult'].errors?.['invalidTennisScore']">

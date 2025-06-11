@@ -46,7 +46,7 @@
                     </span>
                     <div *ngIf="editingMatch === match">
                       <form [formGroup]="resultForm" (ngSubmit)="updateResult(match.id)" (focusout)="onFocusOut($event)">
-                        <input #resultInput matInput formControlName="newResult" placeholder="Vnesite rezultat (npr. 6-4, 4-6, 6-3)" required />
+                        <input #resultInput matInput formControlName="newResult" (input)="formatResultInput($event)" placeholder="Vnesite rezultat (npr. 6-4, 4-6, 6-3)" required />
                         <button mat-button type="submit" [disabled]="resultForm.invalid">Posodobi</button>
                       </form>
                       <div *ngIf="resultForm.controls['newResult'].errors?.['invalidTennisScore']">
@@ -147,9 +147,9 @@
                 <span *ngIf="editingMatch !== match" (dblclick)="editResult(match)">
                   {{ match.result }}
                 </span>
-                <div *ngIf="editingMatch === match">
+                <div *ngIf="editingMatch == match">
                   <form [formGroup]="resultForm" (ngSubmit)="updateResult(match.id)" (focusout)="onFocusOut($event)">
-                    <input #resultInput matInput formControlName="newResult" placeholder="Vnesite rezultat (npr. 6-4, 4-6, 6-3)" required />
+          <input #resultInput matInput formControlName="newResult" (input)="formatResultInput($event)" placeholder="Enter result (e.g., 6-4, 4-6, 6-3)" required/>
                     <button mat-button type="submit" [disabled]="resultForm.invalid">Posodobi</button>
                   </form>
                   <div *ngIf="resultForm.controls['newResult'].errors?.['invalidTennisScore']">

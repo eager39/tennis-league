@@ -15,7 +15,7 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
   selector: 'app-standings',
   templateUrl: './standings.component.html',
   styleUrls: ['./standings.component.css'],
-  imports: [MatTableModule, CommonModule,RouterOutlet,MatTooltipModule],
+  imports: [MatTableModule, CommonModule,MatTooltipModule],
   standalone: true,
   animations: [
     trigger('detailExpand', [

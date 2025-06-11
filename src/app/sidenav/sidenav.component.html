@@ -62,12 +62,13 @@
                 <span class="material-icons">person_add</span>
                 <span *ngIf="authService.getUserEmail()">{{this.authService.getUserEmail()}}</span>
                 <span *ngIf="!authService.getUserEmail()">Uporabnik</span>
+
               </app-sidenav-link>
             </mat-expansion-panel-header>
             <app-sidenav-link routerLink="login" *ngIf="!authService.isAuthenticated()"><span>Prijava</span></app-sidenav-link>
             <app-sidenav-link routerLink="register" *ngIf="!authService.isAuthenticated()"><span>Registracija</span></app-sidenav-link>
             <app-sidenav-link routerLink="logout" (click)="authService.logout()" *ngIf="authService.isAuthenticated()"><span>Odjava </span></app-sidenav-link>
-           
+            <app-sidenav-link routerLink="resetpassword" *ngIf="!authService.isAuthenticated()"><span>Pozabljeno geslo </span></app-sidenav-link>
           </mat-expansion-panel>
 
         </ng-container>

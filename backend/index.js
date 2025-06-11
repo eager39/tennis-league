@@ -17,8 +17,8 @@ const app = express();
 app.enable("trust proxy");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const verifyToken = require('../backend/authmiddleware');
-const cron = require('node-cron');
+const verifyToken = require('./authmiddleware');
+//const cron = require('node-cron');
 
 
 const path = require("path");
@@ -52,18 +52,49 @@ const connection = mysql.createPool({
   queueLimit: 0
 });
 https.createServer(options, app).listen(process.env.PORT, function (req, res) {
-  console.log(res); //Change Port Number here (if required, 443 is the standard port for https)
   console.log("Server started at port "+process.env.PORT);
 });
 
 // Utility function to shuffle an array
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
+const mysqldump = require('mysqldump');
+
+
+const fsp = require('fs/promises');
+
+// // Config
+// const BACKUP_FOLDER = '/mnt/nas/mysql_backups'; // Change to your NAS mount path
+// const FILE_NAME = `backup_${new Date().toISOString().slice(0,10)}.sql`;
+// const LOCAL_PATH = path.join(__dirname, FILE_NAME);
+// const NAS_PATH = path.join(BACKUP_FOLDER, FILE_NAME);
+
+// async function backupAndCopy() {
+//   try {
+//     // Step 1: Create the dump
+//     await mysqldump({
+//       connection: {
+//         host: 'localhost',
+//         user: "eager39",
+//         password: "krizanic",
+//         database: 'tennis_league_local',
+//       },
+//     //  dumpToFile: LOCAL_PATH,
+//     });
+
+//     // console.log('✅ Dump created at', LOCAL_PATH);
+
+//     // // Step 2: Copy to NAS
+//     // await fsp.copyFile(LOCAL_PATH, NAS_PATH);
+//     // console.log('✅ Backup copied to NAS at', NAS_PATH);
+
+//     // // Optionally: Delete local file
+//     // await fsp.unlink(LOCAL_PATH);
+//    // console.log('🧹 Local dump file removed');
+//   } catch (err) {
+//     console.error('❌ Backup failed:', err.message);
+//   }
+// }
+
+// backupAndCopy();
 
 // async function generatePdf(dataSource, logoPath, option = 'matches') {
 //   const pdfDoc = await PDFDocument.create();
@@ -336,12 +367,34 @@ async function generateunplayedmatchespdfthatarepastdeadline(dataSource, logoPat
     width: logoDims.width,
     height: logoDims.height
   });
-  
+ 
+// const latestDate = new Date(Math.max(...dataSource.map(o => new Date(now()))));
+// console.log(latestDate);
    const textWidth = font.widthOfTextAtSize("Neodigrane tekme", 24);
     drawText("Neodigrane tekme", (pageWidth-textWidth)/2, 770, {
       size: 24,
       color: rgb(0, 0.38, 0.18)
     });
+
+      
+  const options = {
+    hour:"numeric",
+  weekday: 'long',   // full day name like "sobota"
+  day: 'numeric',    // day number, e.g. 21
+  month: 'long',     // full month name like "september"
+  year: 'numeric'    // year number
+};
+
+// Use Slovak locale 'sk-SK'
+const formatted = new Intl.DateTimeFormat('sl-si', options).format(new Date());
+
+  drawText(formatted, (pageWidth - textWidth) / 2, 750, {
+    size: 12,
+    color: rgb(0, 0.38, 0.18)
+  });
+
+
+
   for (const [week, matches] of grouped) {
     // Filter if in result mode
    
@@ -405,29 +458,24 @@ headers =
 
     currentY -= 20;
 
-    for (const [i, match] of matches.entries()) {
-      const deadlineFormatted = new Date(+match.deadline).toLocaleDateString('sl-SI', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-      });
-      if(weekmap.includes(match.week)){
+for (let i = 0; i < matches.length; i++) {
+  const match = matches[i];
+  const currentLeague = match.name;
 
-      }else{
-        weekmap.push(match.week)
-      }
-      let row=[]
-      if(gender=="m"){
-        row =  [match.name,match.home_player, match.away_player, match.result]
-      }else{
-         row =  [match.home_player, match.away_player, match.result]
-      }
-      
-       
+  let row = gender === "m"
+    ? [match.name, match.home_player, match.away_player, match.result]
+    : [match.home_player, match.away_player, match.result];
 
-      const stripeColor = i % 2 === 0 ? rgb(0.95, 0.95, 0.95) : null;
-      drawTableRow(row, currentY, stripeColor);
-      currentY -= 18;
+  const stripeColor = i % 2 === 0 ? rgb(0.95, 0.95, 0.95) : null;
+  drawTableRow(row, currentY, stripeColor);
+  currentY -= 18;
+
+  // 🧱 Draw border if league changes or it's the last match
+  const nextLeague = matches[i + 1]?.name;
+  if (currentLeague !== nextLeague) {
+     drawRect(50, currentY+10, 530, 5, rgb(0, 0.38, 0.18)); // 3cm thick border
+    currentY -= 5;
+  }
 
       if (currentY < 60) {
         page = pdfDoc.addPage([595, 842]);
@@ -439,10 +487,191 @@ headers =
   }
 
   const pdfBytes = await pdfDoc.save();
-
-  fs.writeFileSync(filelocation+".pdf", pdfBytes);
+try{
+   fs.writeFileSync(filelocation+".pdf", pdfBytes);
+}catch(error){
+  console.log(error)
+}
+ 
   console.log('✅ PDF saved as unplayedmatches.pdf');
 }
+
+ 
+async function generatepdfwithplayedmatches(dataSource, logoPath,gender,filelocation) {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontSize = 12;
+  let page = pdfDoc.addPage([595, 842]); // A4 size
+  let pageWidth = page.getWidth();
+  let currentY = 730;
+  let weekmap=[]
+  pdfDoc.registerFontkit(fontkit);
+  matches: any=[]
+  const fontBytes = fs.readFileSync(path.join(__dirname, 'fonts/DejaVuSans.ttf'));
+  const customFont = await pdfDoc.embedFont(fontBytes);
+
+  const logoBytes = fs.readFileSync(logoPath);
+  const logoImage = await pdfDoc.embedPng(logoBytes);
+  const logoDims = logoImage.scale(0.60);
+
+
+  const drawText = (text, x, y, options = {}) => {
+    page.drawText(text, {
+      x,
+      y,
+      size: options.size || fontSize,
+      color: options.color || rgb(0, 0, 0),
+      font:customFont
+    });
+  };
+
+  const drawRect = (x, y, w, h, color) => {
+    page.drawRectangle({ x, y, width: w, height: h, color });
+  };
+
+  const grouped = groupByWeek(dataSource);
+  page.drawImage(logoImage, {
+    x: pageWidth - logoDims.width - 20,
+    y: currentY,
+    width: logoDims.width,
+    height: logoDims.height
+  });
+  const latestDate = new Date(Math.max(...dataSource.map(o => new Date(o.last_update))));
+console.log(latestDate);
+   const textWidth = font.widthOfTextAtSize("Odigrane tekme", 24);
+    drawText("Odigrane tekme", (pageWidth-textWidth)/2, 770, {
+      size: 24,
+      color: rgb(0, 0.38, 0.18)
+    });
+
+   
+  const options = {
+    hour:'numeric',
+  weekday: 'long',   // full day name like "sobota"
+  day: 'numeric',    // day number, e.g. 21
+  month: 'long',     // full month name like "september"
+  year: 'numeric'    // year number
+};
+
+// Use Slovak locale 'sk-SK'
+const formatted = new Intl.DateTimeFormat('sl-si', options).format(latestDate);
+
+  drawText(formatted, (pageWidth - textWidth) / 2, 750, {
+    size: 12,
+    color: rgb(0, 0.38, 0.18)
+  });
+
+
+
+  for (const [week, matches] of grouped) {
+    // Filter if in result mode
+   
+
+
+    const estimatedHeight = 20 + 20 + (matches.length * 18) + 20 ;
+
+    if (currentY - estimatedHeight < 60) {
+      page = pdfDoc.addPage([595, 842]);
+      currentY = 820;
+      // page.drawImage(logoImage, {
+      //   x: pageWidth - logoDims.width - 20,
+      //   y: currentY,
+      //   width: logoDims.width,
+      //   height: logoDims.height
+      // });
+    }
+    // Add logo top right
+  
+
+    currentY -= 30;
+    drawText(`${week}. kolo`, 50, currentY, {
+      size: 12,
+      color: rgb(0, 0.38, 0.18)
+    });
+    currentY -= 20;
+    let headers=[]
+     let widths=[]
+
+      if(gender=="m"){
+headers = 
+      ['Liga','Domačin', 'Gost', 'Rezultat']
+       widths = [150, 150, 130, 100];
+      }else{
+       headers =  ['Domačin', 'Gost', 'Rezultat']
+       widths = [ 176, 176, 176];
+      }
+   
+
+ const drawTableRow = (row, y, bgColor = null,textColor = rgb(0, 0, 0)) => {
+  let x = 50;
+  row.forEach((cell, i) => {
+    const w = widths[i];
+    
+    // Replace "No result" with "Neodigrano"
+    const content = String(cell).trim() === "No result" ? "Neodigrano" : String(cell);
+
+    if (bgColor) drawRect(x - 2, y - 2, w, 16, bgColor);
+    drawText(content, x, y, { size: fontSize ,color: textColor });
+    x += w;
+  });
+};
+    // Draw table header
+    drawTableRow(headers, currentY, rgb(0, 0.38, 0.18),rgb(1, 1,1));
+    // headers.forEach((text, i) => {
+    //   // drawText(text, 50 + widths.slice(0, i).reduce((a, b) => a + b, 0), currentY, {
+    //   //   size: fontSize,
+    //   //   color: rgb(1, 1, 1)
+    //   // });
+    // });
+
+    currentY -= 20;
+
+ let previousLeague = null;
+
+for (let i = 0; i < matches.length; i++) {
+  const match = matches[i];
+  const currentLeague = match.name;
+
+  let row = gender === "m"
+    ? [match.name, match.home_player, match.away_player, match.result]
+    : [match.home_player, match.away_player, match.result];
+
+  const stripeColor = i % 2 === 0 ? rgb(0.95, 0.95, 0.95) : null;
+  drawTableRow(row, currentY, stripeColor);
+  currentY -= 18;
+
+  // 🧱 Draw border if league changes or it's the last match
+  const nextLeague = matches[i + 1]?.name;
+  if (currentLeague !== nextLeague) {
+  
+        drawRect(50, currentY+10, 530, 5, rgb(0, 0.38, 0.18)); // 3cm thick border
+    currentY -= 5;
+    
+  
+  }
+
+  // Handle page break
+  if (currentY < 60) {
+    page = pdfDoc.addPage([595, 842]);
+    currentY = 780;
+  }
+}
+
+    currentY -= 20;
+  }
+
+  const pdfBytes = await pdfDoc.save();
+try{
+   fs.writeFileSync(filelocation+".pdf", pdfBytes);
+}catch(error){
+  console.log(error)
+}
+ 
+  console.log('✅ PDF saved as unplayedmatches.pdf');
+}
+
+
+
 function groupByWeek(matches) { //group by week and order by league same pdf
   const map = new Map();
 
@@ -494,54 +723,16 @@ function groupByWeek(matches) { //group by week and order by league same pdf
 //   return map;
 // }
 
-function getUnplayedMatches(seasonId,leagueId) {
-  const query = `
-   SELECT
-  s.id,
-  ps_home.player_id AS home_player_id,
-  hp.name AS home_player,
-  ps_away.player_id AS away_player_id,
-  ap.name AS away_player,
-  s.result,
-  ps_home.league_id,
-  s.week,
-  s.deadline,
-  s.home_player AS home_player_s_id,
-  s.away_player AS away_player_s_id,
-  l.name
-FROM schedule s
-JOIN players_season ps_home ON s.home_player = ps_home.id
-JOIN players hp ON ps_home.player_id = hp.id
-JOIN players_season ps_away ON s.away_player = ps_away.id
-JOIN players ap ON ps_away.player_id = ap.id
-JOIN leagues l on ps_home.league_id=l.id
-WHERE s.result = "No result"
-  AND ps_home.season_id = ?
-  AND s.deadline < (UNIX_TIMESTAMP()*1000 + 7 * 24 * 60 * 60*1000)
-ORDER BY s.week ASC;
-  `;
 
-  return new Promise((resolve, reject) => {
-    connection.query(query, [seasonId,leagueId], (err, data) => {
-      if (err) {
-        console.error("Error fetching unplayed matches:", err);
-        reject(err);
-      } else {
-       // console.log(data)
-        resolve(data);
-      }
-    });
-  });
-}
 function getStandingsperleague(seasonId,league_id) {
   const query = `
- SELECT p.name,standings.position,standings.points,standings.netgameswon,standings.matches_played,standings.num_of_penalty,l.name as liga FROM standings 
+ SELECT p.name,standings.position,standings.points,standings.netsetswon,standings.netgameswon,standings.matches_played,standings.num_of_penalty,l.name as liga,standings.last_update FROM standings 
  JOIN players_season ps 
         ON standings.player = ps.id 
        JOIN players p 
         ON ps.player_id = p.id
         join leagues l on ps.league_id=l.id
-          WHERE ps.league_id=? and ps.season_id=?
+          WHERE ps.league_id=? and ps.season_id=? and p.name!='prosta' and p.name!='prost'
       ORDER BY standings.position ASC
   `;
 
@@ -571,7 +762,8 @@ function getUnplayedMatchesmoški(seasonId) {
   s.deadline,
   s.home_player AS home_player_s_id,
   s.away_player AS away_player_s_id,
-  l.name
+  l.name,
+   s.last_update
 FROM schedule s
 JOIN players_season ps_home ON s.home_player = ps_home.id
 JOIN players hp ON ps_home.player_id = hp.id
@@ -580,7 +772,7 @@ JOIN players ap ON ps_away.player_id = ap.id
 JOIN leagues l on ps_home.league_id=l.id
 WHERE s.result = "No result"
   AND ps_home.season_id = ?
-  AND s.deadline < (UNIX_TIMESTAMP()*1000 + 7 * 24 * 60 * 60*1000)
+  AND s.deadline < (UNIX_TIMESTAMP()*1000 + 0 * 24 * 60 * 60*1000)
   and ps_home.league_id!=6
 ORDER BY s.week ASC;
   `;
@@ -591,7 +783,89 @@ ORDER BY s.week ASC;
         console.error("Error fetching unplayed matches:", err);
         reject(err);
       } else {
-       // console.log(data)
+      
+        resolve(data);
+      }
+    });
+  });
+}
+function getPlayedMatchesmoški(seasonId) {
+  const query = `
+   SELECT
+  s.id,
+  ps_home.player_id AS home_player_id,
+  hp.name AS home_player,
+  ps_away.player_id AS away_player_id,
+  ap.name AS away_player,
+  s.result,
+  ps_home.league_id,
+  s.week,
+  s.deadline,
+  s.home_player AS home_player_s_id,
+  s.away_player AS away_player_s_id,
+  l.name,
+  s.last_update
+FROM schedule s
+JOIN players_season ps_home ON s.home_player = ps_home.id
+JOIN players hp ON ps_home.player_id = hp.id
+JOIN players_season ps_away ON s.away_player = ps_away.id
+JOIN players ap ON ps_away.player_id = ap.id
+JOIN leagues l on ps_home.league_id=l.id
+WHERE s.result != "No result"
+  AND ps_home.season_id = ?
+
+  and ps_home.league_id!=6
+ORDER BY s.week ASC;
+  `;
+
+  return new Promise((resolve, reject) => {
+    connection.query(query, [seasonId], (err, data) => {
+      if (err) {
+        console.error("Error fetching unplayed matches:", err);
+        reject(err);
+      } else {
+      
+        resolve(data);
+      }
+    });
+  });
+}
+function getPlayedMatchesženske(seasonId) {
+  const query = `
+   SELECT
+  s.id,
+  ps_home.player_id AS home_player_id,
+  hp.name AS home_player,
+  ps_away.player_id AS away_player_id,
+  ap.name AS away_player,
+  s.result,
+  ps_home.league_id,
+  s.week,
+  s.deadline,
+  s.home_player AS home_player_s_id,
+  s.away_player AS away_player_s_id,
+  l.name,
+  s.last_update
+FROM schedule s
+JOIN players_season ps_home ON s.home_player = ps_home.id
+JOIN players hp ON ps_home.player_id = hp.id
+JOIN players_season ps_away ON s.away_player = ps_away.id
+JOIN players ap ON ps_away.player_id = ap.id
+JOIN leagues l on ps_home.league_id=l.id
+WHERE s.result != "No result"
+  AND ps_home.season_id = ?
+
+  and ps_home.league_id=6
+ORDER BY s.week ASC;
+  `;
+
+  return new Promise((resolve, reject) => {
+    connection.query(query, [seasonId], (err, data) => {
+      if (err) {
+        console.error("Error fetching unplayed matches:", err);
+        reject(err);
+      } else {
+      
         resolve(data);
       }
     });
@@ -611,7 +885,8 @@ function getUnplayedMatchesženske(seasonId) {
   s.deadline,
   s.home_player AS home_player_s_id,
   s.away_player AS away_player_s_id,
-  l.name
+  l.name,
+  s.last_update
 FROM schedule s
 JOIN players_season ps_home ON s.home_player = ps_home.id
 JOIN players hp ON ps_home.player_id = hp.id
@@ -620,7 +895,7 @@ JOIN players ap ON ps_away.player_id = ap.id
 JOIN leagues l on ps_home.league_id=l.id
 WHERE s.result = "No result"
   AND ps_home.season_id = ?
-  AND s.deadline < (UNIX_TIMESTAMP()*1000 + 7 * 24 * 60 * 60*1000)
+  AND s.deadline < (UNIX_TIMESTAMP()*1000 + 0 * 24 * 60 * 60*1000)
   and ps_home.league_id=6
   and (hp.name!='prosta' and ap.name!='prosta')
 
@@ -633,61 +908,63 @@ ORDER BY s.week ASC;
         console.error("Error fetching unplayed matches:", err);
         reject(err);
       } else {
-       // console.log(data)
+       
         resolve(data);
       }
     });
   });
 }
-async function getLeaguesWithUnplayedMatches(seasonid) {
-  const query = `
-    SELECT DISTINCT ps_home.league_id AS league_id, l.name
-    FROM schedule s
-    JOIN players_season ps_home ON s.home_player = ps_home.id
-    JOIN players_season ps_away ON s.away_player = ps_away.id
-    JOIN leagues l ON ps_home.league_id = l.id
-    WHERE s.result = "No result"
-      AND ps_home.season_id = ?
-      AND s.deadline < (UNIX_TIMESTAMP() * 1000 + 7 * 24 * 60 * 60 * 1000)
-    ORDER BY ps_home.league_id ASC
-  `;
-  return new Promise((resolve, reject) => {
-    connection.query(query, [seasonid], (err, data) => {
-      if (err) {
-        console.error("Error fetching unplayed matches:", err);
-        reject(err);
-      } else {
-        //console.log(data)
-        resolve(data);
-      }
-    });
-  });
-}
-async function getLeaguesWithUnplayedMatchesmoški(seasonid) {
-  const query = `
-    SELECT DISTINCT ps_home.league_id AS league_id, l.name
-    FROM schedule s
-    JOIN players_season ps_home ON s.home_player = ps_home.id
-    JOIN players_season ps_away ON s.away_player = ps_away.id
-    JOIN leagues l ON ps_home.league_id = l.id
-    WHERE s.result = "No result"
-      AND ps_home.season_id = ?
-      AND s.deadline < (UNIX_TIMESTAMP() * 1000 + 0 * 24 * 60 * 60 * 1000)
-      and ps_home.league_id!=6
-    ORDER BY ps_home.league_id ASC
-  `;
-  return new Promise((resolve, reject) => {
-    connection.query(query, [seasonid], (err, data) => {
-      if (err) {
-        console.error("Error fetching unplayed matches:", err);
-        reject(err);
-      } else {
-        //console.log(data)
-        resolve(data);
-      }
-    });
-  });
-}
+// async function getLeaguesWithUnplayedMatches(seasonid) {
+//   const query = `
+//     SELECT DISTINCT ps_home.league_id AS league_id, l.name
+//     FROM schedule s
+//     JOIN players_season ps_home ON s.home_player = ps_home.id
+//     JOIN players_season ps_away ON s.away_player = ps_away.id
+//     JOIN leagues l ON ps_home.league_id = l.id
+//     WHERE s.result = "No result"
+//       AND ps_home.season_id = ?
+//       AND s.deadline < (UNIX_TIMESTAMP() * 1000 + 7 * 24 * 60 * 60 * 1000)
+//     ORDER BY ps_home.league_id ASC
+//   `;
+//   return new Promise((resolve, reject) => {
+//     connection.query(query, [seasonid], (err, data) => {
+//       if (err) {
+//         console.error("Error fetching unplayed matches:", err);
+//         reject(err);
+//       } else {
+//         //console.log(data)
+//         resolve(data);
+//       }
+//     });
+//   });
+// }
+
+// async function getLeaguesWithUnplayedMatchesmoški(seasonid) {
+//   const query = `
+//     SELECT DISTINCT ps_home.league_id AS league_id, l.name
+//     FROM schedule s
+//     JOIN players_season ps_home ON s.home_player = ps_home.id
+//     JOIN players_season ps_away ON s.away_player = ps_away.id
+//     JOIN leagues l ON ps_home.league_id = l.id
+//     WHERE s.result = "No result"
+//       AND ps_home.season_id = ?
+//       AND s.deadline < (UNIX_TIMESTAMP() * 1000 + 0 * 24 * 60 * 60 * 1000)
+//       and ps_home.league_id!=6
+//     ORDER BY ps_home.league_id ASC
+//   `;
+//   return new Promise((resolve, reject) => {
+//     connection.query(query, [seasonid], (err, data) => {
+//       if (err) {
+//         console.error("Error fetching unplayed matches:", err);
+//         reject(err);
+//       } else {
+//         //console.log(data)
+//         resolve(data);
+//       }
+//     });
+//   });
+// }
+
 async function generatepdfmenunplayed(seasonid,league,filelocation) {
   try {
     let matches=[]
@@ -719,6 +996,38 @@ async function generatepdfmenunplayed(seasonid,league,filelocation) {
     console.error('❌ Failed to generate reports:', err);
   }
 }
+async function generepdfwithplayedmatches(seasonid,league,filelocation) {
+  try {
+    let matches=[]
+   // const leagues = await getLeaguesWithUnplayedMatches(seasonid);
+   // console.log(leagues)
+   // for (const league of leagues) {
+     // const leagueId = league.league_id;
+     // const matches = await getUnplayedMatches(seasonid, leagueId);
+     if(league=="m"){
+       matches = await getPlayedMatchesmoški(seasonid);
+     }else{
+  matches = await getPlayedMatchesženske(seasonid);
+     }
+      
+    
+      if (matches.length > 0) {
+        await generatepdfwithplayedmatches(
+          matches,
+          path.join(__dirname, 'logo.png'),
+          league,
+          filelocation
+        );
+        //console.log(`✅ Report generated for league ${leagueId}`);
+      } else {
+       // console.log(`ℹ️ No matches to report for league ${leagueId}`);
+      }
+   // }
+  } catch (err) {
+    console.error('❌ Failed to generate reports:', err);
+  }
+}
+
 
 async function pdfstandings(filelocation,league_id) {
   try {
@@ -763,7 +1072,7 @@ async function safeSendEmail(to, htmlContent, subject, filePaths) {
       filename: path.basename(file),
       path:file
     }));
-console.log(validAttachments.length )
+
   if (validAttachments.length === 0) {
 
     console.log(`Skipped sending "${subject}" — no valid attachments.`);
@@ -781,11 +1090,13 @@ const allowedFiles = [
   "cetrta_liga_razvrstitev.pdf",
   "zenska_liga_razvrstitev.pdf",
   "Neodigrane zenske tekme.pdf",
-  "Neodigrane moske tekme.pdf"
+  "Neodigrane moske tekme.pdf",
+  "rezultati_moski.pdf",
+  "rezultati_zenske.pdf"
 
 ];
 
-app.get("/download/:fileName/:league", async (req, res) => { 
+app.get("/download/:fileName/:league",verifyToken("admin"), async (req, res) => { 
    const { fileName } = req.params;
 //     generatepdfmenunplayed(4,"m","Neodigrane moške tekme");
 //  generatepdfmenunplayed(4,"ž","Neodigrane ženske tekme");
@@ -815,9 +1126,15 @@ await pdfstandings("druga_liga_razvrstitev",2)
       case "zenska_liga_razvrstitev.pdf":
 await pdfstandings("zenska_liga_razvrstitev",6)
     break;
+    case "rezultati_moski.pdf":
+await generepdfwithplayedmatches(4,"m","rezultati_moski")
+    break;
+      case "rezultati_zenske.pdf":
+await generepdfwithplayedmatches(4,"ž","rezultati_zenske")
+    break;
   
 }
-
+generepdfwithplayedmatches(4,"ž","odigrane tekme")
  
 
   if (!allowedFiles.includes(fileName)) {
@@ -843,7 +1160,7 @@ await pdfstandings("zenska_liga_razvrstitev",6)
 });
 
 app.post("/deadline", async (req, res) => {
-console.log(req.body.emails)
+
   generatepdfmenunplayed(4,"m","Neodigrane moške tekme");
  generatepdfmenunplayed(4,"ž","Neodigrane ženske tekme");
  pdfstandings("prva_liga_razvrstitev",1)
@@ -882,7 +1199,7 @@ async function sendEmail(usermail,sporocilo,subject,attachmentPath) {
       }
     });
    
-console.log(attachmentPath)
+
     const message = {
       from: 'krizaniczan@gmail.com',
       bcc: usermail,
@@ -952,9 +1269,11 @@ async function generatepdfstandings(dataSource, logoPath, filelocation) {
     width: logoDims.width,
     height: logoDims.height
   });
-
+const latestDate = new Date(Math.max(...dataSource.map(o => new Date(o.last_update))));
+console.log(latestDate);
   const titleText = "Razvrstitve "+dataSource[0].liga;
   const options = {
+   hour:"numeric",
   weekday: 'long',   // full day name like "sobota"
   day: 'numeric',    // day number, e.g. 21
   month: 'long',     // full month name like "september"
@@ -962,7 +1281,7 @@ async function generatepdfstandings(dataSource, logoPath, filelocation) {
 };
 
 // Use Slovak locale 'sk-SK'
-const formatted = new Intl.DateTimeFormat('sl-si', options).format(new Date());
+const formatted = new Intl.DateTimeFormat('sl-si', options).format(latestDate);
   const textWidth = font.widthOfTextAtSize(titleText, 24);
   drawText(titleText, (pageWidth - textWidth) / 2, 770, {
     size: 24,
@@ -981,8 +1300,8 @@ const formatted = new Intl.DateTimeFormat('sl-si', options).format(new Date());
   // });
   currentY -= 20;
 
-  const headers = ['Pozicija', 'Igralec', 'Točke', 'Igre', 'Odigrana kola', 'Kazenske točke'];
-  const widths = [60, 150, 60, 60, 100, 100];
+  const headers = ['Pozicija', 'Igralec','Točke','Nizi', 'Igre', 'Št. Tekem', 'Kazenske točke'];
+  const widths = [50,130, 50, 50, 50,100, 100];
 
   const drawTableRow = (row, y, bgColor = null, textColor = rgb(0, 0, 0)) => {
     let x = 50;
@@ -1004,6 +1323,7 @@ const formatted = new Intl.DateTimeFormat('sl-si', options).format(new Date());
       match.position,
       match.name,
       match.points,
+      match.netsetswon,
       match.netgameswon,
       match.matches_played,
       match.num_of_penalty
@@ -1084,7 +1404,7 @@ WHERE
     if (data.length == 0) {
       res.json({ message: "No matches found in the league for the user." });
     } else {
-        console.log(data)
+      
       res.json(data);
     }
   
@@ -1096,7 +1416,7 @@ app.get("/getMyMatches",verifyToken("user"), (req, res) => {
 
   const userid = req.query.id;
   const season = req.headers.season;
-console.log(userid)
+
   // Updated query to fetch player details from both players_season and players tables
   const query = `
    SELECT 
@@ -1145,7 +1465,7 @@ ORDER BY
     if (data.length == 0) {
       res.json({ message: "No matches found in the league for the user." });
     } else {
-        console.log(data)
+      
       res.json(data);
     }
   });
@@ -1253,7 +1573,7 @@ async function getDate(season){
 
 // Helper function to calculate the deadline
 function calculateDeadline(week,start_date) {
-  console.log(start_date)
+  
   // Adjust the start date if necessary
   // console.log(leagueStartDate)
   const deadlineDate = new Date(start_date*1000);
@@ -1623,7 +1943,7 @@ ORDER BY
         .json({ error: "An error occurred while fetching matches" });
       return;
     }
-    console.log(results);
+   
     res.json(results);
   });
 });
@@ -1690,18 +2010,18 @@ ORDER BY
 // });
 app.post("/generate-schedule2",verifyToken("admin"),async (req, res) => {
   const { player_Ids, season } = req.body;
-  console.log(req.body)
+ 
   // Fetch player IDs
 
 
 
-      console.log(player_Ids);
+    
 
       shuffledPlayerIds = player_Ids;
     
       const schedule = generateRoundRobinSchedule(shuffledPlayerIds);
       const alternatedSchedule = schedule;
-      console.log(schedule.length)
+     
       //Insert schedule into the database
       for (let week = 0; week < alternatedSchedule.length; week++) {
         const roundData = alternatedSchedule[week]; // Get the data for the current round
@@ -1709,7 +2029,7 @@ app.post("/generate-schedule2",verifyToken("admin"),async (req, res) => {
         const match = roundData.match;
         const homePlayerId = roundData.player1;  // Home player (player1)
         const awayPlayerId = roundData.player2;  // Away player (player2)
-        console.log(homePlayerId)
+       
         // Now insert this match into your database
         const query = "INSERT INTO schedule (week, home_player, away_player, deadline) VALUES (?, ?, ?, ?)";
         
@@ -1891,7 +2211,7 @@ WHERE
             standings[awayPlayerSeasonId].setsPlayed += homeSetsWon + awaySetsWon;
           
             // ✅ Deduct points if home player received a penalty
-            console.log(match)
+           
             if (match.penalty==homePlayerSeasonId ) {
               
               standings[homePlayerSeasonId].points -= 1;
@@ -1967,131 +2287,110 @@ WHERE
         // Compare each pair of tied players
 // Compare each pair of tied players
 tiedPlayers.forEach((playerA, indexA) => {
- 
   tiedPlayers.slice(indexA + 1).forEach((playerB) => {
     const pairIdentifier = [playerA, playerB].sort().join("-");
-    
-    if (!checkedPairs.has(pairIdentifier)) {
-      checkedPairs.add(pairIdentifier);
+    if (checkedPairs.has(pairIdentifier)) return;
 
-      const match = matches.find(
-        (m) =>
-          (m.home_player == playerA && m.away_player == playerB) ||
-          (m.home_player == playerB && m.away_player == playerA)
-      );
-      if (!match.result || match.result == "no result") {
-        playerStatsInTieGroup[playerA].opponents.push({
-          opponent: standings[playerB].name,
-          sets: match.result || "-",
-          result: "",
-          netSetsWon: 0,
-          netGamesWon: 0,
-        });
-        playerStatsInTieGroup[playerB].opponents.push({
-          opponent: standings[playerA].name,
-          sets: match.result || "-",
-          result: "",
-          netSetsWon: 0,
-          netGamesWon: 0,
-        });
-        return;
-      }
-      
-      if (match && match.result) {
-        const sets = match.result.split(",").map((set) => set.trim());
-        let homeSetsWon = 0, awaySetsWon = 0, homeGamesWon = 0, awayGamesWon = 0;
+    checkedPairs.add(pairIdentifier);
 
-        sets.forEach((set) => {
-          const [homeScore, awayScore] = set.split("-").map(Number);
-          if (homeScore > awayScore) homeSetsWon++;
-          else awaySetsWon++;
-          homeGamesWon += homeScore;
-          awayGamesWon += awayScore;
-        });
+    const match = matches.find(
+      (m) =>
+        (m.home_player == playerA && m.away_player == playerB) ||
+        (m.home_player == playerB && m.away_player == playerA)
+    );
 
-   
-
-        // Update stats for Player A and Player B
-        if (match.home_player == playerA) {
-          // Player A is home, Player B is away
-          if (homeSetsWon > awaySetsWon) {
-            playerStatsInTieGroup[playerA].wins++;
-            playerStatsInTieGroup[playerA].headToHeadResults[playerB] = "Win"; // Store head-to-head win
-              playerStatsInTieGroup[playerB].headToHeadResults[playerA] = "Loss"; // Store head-to-head loss
-          } else {
-            playerStatsInTieGroup[playerB].wins++;
-            playerStatsInTieGroup[playerB].headToHeadResults[playerA] = "Win"; // Store head-to-head win
-            playerStatsInTieGroup[playerA].headToHeadResults[playerB] = "Loss"; // Store head-to-head loss
-          
-          }
-          
-          playerStatsInTieGroup[playerA].netSetsWon += homeSetsWon - awaySetsWon;
-          playerStatsInTieGroup[playerB].netSetsWon += awaySetsWon - homeSetsWon;
-          playerStatsInTieGroup[playerA].netGamesWon += homeGamesWon - awayGamesWon;
-          playerStatsInTieGroup[playerB].netGamesWon += awayGamesWon - homeGamesWon;
-          function checkresult(match){
-            if(match.result=='No result'){
-              return ''
-            }else{
-             return (homeSetsWon > awaySetsWon ? 'Win' : 'Loss')
-            }
-          }
-          // Store correct results for both players' perspectives
-          playerStatsInTieGroup[playerA].opponents.push({
-            opponent: standings[playerB].name,
-            sets: match.result,
-            result: checkresult(match), // Player A's result (Home perspective)
-            netSetsWon: homeSetsWon - awaySetsWon,
-            netGamesWon: homeGamesWon - awayGamesWon,
-          });
-          
-       
-          
-          playerStatsInTieGroup[playerB].opponents.push({
-            opponent: standings[playerA].name,
-            sets: match.result,
-            result: checkresult(match),// Player B's result (Away perspective)
-            netSetsWon: awaySetsWon - homeSetsWon,
-            netGamesWon: awayGamesWon - homeGamesWon,
-          });
-        } else {
-          // Player A is away, Player B is home
-          if (awaySetsWon > homeSetsWon) {
-            playerStatsInTieGroup[playerA].wins++;
-            playerStatsInTieGroup[playerA].headToHeadResults[playerB] = "Win"; // Store head-to-head win
-            playerStatsInTieGroup[playerB].headToHeadResults[playerA] = "Loss"; // Store head-to-head loss
-          } else {
-            playerStatsInTieGroup[playerB].wins++;
-            playerStatsInTieGroup[playerB].headToHeadResults[playerA] = "Win"; // Store head-to-head win
-            playerStatsInTieGroup[playerA].headToHeadResults[playerB] = "Loss"; // Store head-to-head loss
-          }
-
-          playerStatsInTieGroup[playerA].netSetsWon += awaySetsWon - homeSetsWon;
-          playerStatsInTieGroup[playerB].netSetsWon += homeSetsWon - awaySetsWon;
-          playerStatsInTieGroup[playerA].netGamesWon += awayGamesWon - homeGamesWon;
-          playerStatsInTieGroup[playerB].netGamesWon += homeGamesWon - awayGamesWon;
-
-          // Store correct results for both players' perspectives
-          playerStatsInTieGroup[playerA].opponents.push({
-            opponent: standings[playerB].name,
-            sets: match.result,
-            result: awaySetsWon > homeSetsWon ? 'Win' : 'Loss', // Player A's result (Away perspective)
-            netSetsWon: awaySetsWon - homeSetsWon,
-            netGamesWon: awayGamesWon - homeGamesWon,
-          });
-
-          playerStatsInTieGroup[playerB].opponents.push({
-            opponent: standings[playerA].name,
-            sets: match.result,
-            result: homeSetsWon > awaySetsWon ? 'Win' : 'Loss', // Player B's result (Home perspective)
-            netSetsWon: homeSetsWon - awaySetsWon,
-            netGamesWon: homeGamesWon - awayGamesWon,
-          });
-        }
-      }
+    // If no match found or no valid result, skip stat calculations
+    if (!match || !match.result || match.result.toLowerCase() === "no result") {
+      // Still record the opponent with placeholder data
+      playerStatsInTieGroup[playerA].opponents.push({
+        opponent: standings[playerB].name,
+        sets: "-",
+        result: "No result",
+        netSetsWon: 0,
+        netGamesWon: 0,
+      });
+      playerStatsInTieGroup[playerB].opponents.push({
+        opponent: standings[playerA].name,
+        sets: "-",
+        result: "No result",
+        netSetsWon: 0,
+        netGamesWon: 0,
+      });
+      return;
     }
+
+    // If match has a valid result
+    const sets = match.result.split(",").map((set) => set.trim());
+    let homeSetsWon = 0,
+      awaySetsWon = 0,
+      homeGamesWon = 0,
+      awayGamesWon = 0;
+
+    sets.forEach((set) => {
+      const [homeScore, awayScore] = set.split("-").map(Number);
+      if (!isNaN(homeScore) && !isNaN(awayScore)) {
+        if (homeScore > awayScore) homeSetsWon++;
+        else awaySetsWon++;
+        homeGamesWon += homeScore;
+        awayGamesWon += awayScore;
+      }
+    });
+
+    // Identify who's home and who's away
+    const isPlayerAHome = match.home_player == playerA;
+
+    const playerAStats = playerStatsInTieGroup[playerA];
+    const playerBStats = playerStatsInTieGroup[playerB];
+
+    // Result and stat calculation
+    const playerAWon = isPlayerAHome ? homeSetsWon > awaySetsWon : awaySetsWon > homeSetsWon;
+
+    // Update win counters and H2H
+    if (playerAWon) {
+      playerAStats.wins++;
+      playerAStats.headToHeadResults[playerB] = "Win";
+      playerBStats.headToHeadResults[playerA] = "Loss";
+    } else {
+      playerBStats.wins++;
+      playerBStats.headToHeadResults[playerA] = "Win";
+      playerAStats.headToHeadResults[playerB] = "Loss";
+    }
+
+    // Update net sets/games
+    const netSetsA = isPlayerAHome
+      ? homeSetsWon - awaySetsWon
+      : awaySetsWon - homeSetsWon;
+    const netGamesA = isPlayerAHome
+      ? homeGamesWon - awayGamesWon
+      : awayGamesWon - homeGamesWon;
+
+    const netSetsB = -netSetsA;
+    const netGamesB = -netGamesA;
+
+    playerAStats.netSetsWon += netSetsA;
+    playerAStats.netGamesWon += netGamesA;
+    playerBStats.netSetsWon += netSetsB;
+    playerBStats.netGamesWon += netGamesB;
+
+    // Push opponent data for both players
+    playerAStats.opponents.push({
+      opponent: standings[playerB].name,
+      sets: match.result,
+      result: playerAWon ? "Win" : "Loss",
+      netSetsWon: netSetsA,
+      netGamesWon: netGamesA,
+    });
+
+    playerBStats.opponents.push({
+      opponent: standings[playerA].name,
+      sets: match.result,
+      result: playerAWon ? "Loss" : "Win",
+      netSetsWon: netSetsB,
+      netGamesWon: netGamesB,
+    });
   });
 });
+
 
      // Later, each time you get a new playerStatsInTieGroup object:
 alltiedplayers.push(playerStatsInTieGroup);
@@ -2148,22 +2447,50 @@ allPlayerIds.forEach((playerId) => {
     });
   }
 });
-            // Sort tied players based on wins, net sets won, and net games won
-            return tiedPlayers.sort((playerA, playerB) => {
-        
-               // 2. If tied, compare by head-to-head result
-    const headToHeadResult = playerStatsInTieGroup[playerA].headToHeadResults[playerB];
-    if (headToHeadResult === "Win") return -1;
-    if (headToHeadResult === "Loss") return 1;
+return tiedPlayers.sort((playerA, playerB) => {
+  const tieStatsA = playerStatsInTieGroup[playerA] || {};
+  const tieStatsB = playerStatsInTieGroup[playerB] || {};
 
-              const winsDiff = playerStatsInTieGroup[playerB].wins - playerStatsInTieGroup[playerA].wins;
-              if (winsDiff != 0) return winsDiff;
-          
-              const netSetsDiff = playerStatsInTieGroup[playerB].netSetsWon - playerStatsInTieGroup[playerA].netSetsWon;
-              if (netSetsDiff != 0) return netSetsDiff;
-          
-              return playerStatsInTieGroup[playerB].netGamesWon - playerStatsInTieGroup[playerA].netGamesWon;
-            });
+  const overallA = standings[playerA] || {};
+  const overallB = standings[playerB] || {};
+
+  // 1. Wins in tie group
+  const winsDiff = (tieStatsB.wins ?? 0) - (tieStatsA.wins ?? 0);
+  if (winsDiff !== 0) return winsDiff;
+
+  // 2. Head-to-head if exists
+  const h2h = tieStatsA.headToHeadResults?.[playerB];
+  if (h2h === "Win") {
+    // Use tie group net sets/games only if head-to-head exists
+    const netSetsDiff = (tieStatsB.netSetsWon ?? 0) - (tieStatsA.netSetsWon ?? 0);
+    if (netSetsDiff !== 0) return netSetsDiff;
+
+    const netGamesDiff = (tieStatsB.netGamesWon ?? 0) - (tieStatsA.netGamesWon ?? 0);
+    if (netGamesDiff !== 0) return netGamesDiff;
+
+    return -1; // A beat B
+  }
+
+  if (h2h === "Loss") {
+    const netSetsDiff = (tieStatsB.netSetsWon ?? 0) - (tieStatsA.netSetsWon ?? 0);
+    if (netSetsDiff !== 0) return netSetsDiff;
+
+    const netGamesDiff = (tieStatsB.netGamesWon ?? 0) - (tieStatsA.netGamesWon ?? 0);
+    if (netGamesDiff !== 0) return netGamesDiff;
+
+    return 1; // B beat A
+  }
+
+  // 3. No head-to-head => use overall net sets/games
+  const netSetsDiff = (overallB.netSetsWon ?? 0) - (overallA.netSetsWon ?? 0);
+  if (netSetsDiff !== 0) return netSetsDiff;
+
+  const netGamesDiff = (overallB.netGamesWon ?? 0) - (overallA.netGamesWon ?? 0);
+  if (netGamesDiff !== 0) return netGamesDiff;
+
+  // 4. Still tied
+  return 0;
+});
           };
           
           
@@ -2293,7 +2620,7 @@ app.get("/standings/:id", (req, res) => {
         ON standings.player = ps.id 
        JOIN players p 
         ON ps.player_id = p.id
-          WHERE ps.league_id=? and ps.season_id=?
+          WHERE ps.league_id=? and ps.season_id=? and (p.name!='prosta' and p.name !='prost')
       ORDER BY standings.position ASC
     `;
 
@@ -2320,10 +2647,12 @@ app.post("/update-match-result", verifyToken("user,admin"), (req, res) => {
 
   // First, fetch the match to validate ownership
   const checkQuery = `
-   SELECT p.user_id
+   SELECT p.user_id,p.name as home,p_away.name as away
     FROM schedule s
     JOIN players_season ps_home ON s.home_player = ps_home.id
   	join players p on ps_home.player_id=p.id
+    JOIN players_season ps_away ON s.away_player = ps_away.id
+    join players p_away on ps_away.player_id=p_away.id
     WHERE s.id = ? AND s.result_confirmed = 0
   `;
 
@@ -2346,11 +2675,11 @@ app.post("/update-match-result", verifyToken("user,admin"), (req, res) => {
 
     // Proceed to update the result
     const updateQuery = `
-      UPDATE schedule SET result = ? 
+      UPDATE schedule SET result = ?,edited_by=? 
       WHERE id = ? AND result_confirmed = 0
     `;
-
-    connection.query(updateQuery, [result, id], (err, updateResult) => {
+    sendEmail("krizaniczan@gmail.com",match.home+" vs "+match.away+" " +result+" uporabnik "+req.user.email,"novi rezultat")
+    connection.query(updateQuery, [result,userId, id], (err, updateResult) => {
       if (err) {
         console.error("Error updating match result:", err);
         return res.status(500).json({ error: "Failed to update match result" });
@@ -2384,8 +2713,7 @@ app.post("/ifalreadyinleague", (req, res) => {
           .json({ error: "An error occurred while updating match result" });
         return;
       }
-    console.log(results)
-    console.log(results1)
+  
     if(results.length>0){
        res.json({ message: "true" });
     }else if(results.length==0 && results1.length>0){
@@ -2432,7 +2760,7 @@ app.post("/applypenalty",verifyToken("admin"), (req, res) => {
 });
 app.post("/changePlayerLeague",verifyToken("admin"), (req, res) => {
   const { id, newleagueid } = req.body;
-  console.log(id,newleagueid)
+  
   const query = "UPDATE players_season SET league_id = ? WHERE id = ?";
 
   connection.query(query, [newleagueid,id], (err, results) => {
@@ -2444,7 +2772,7 @@ app.post("/changePlayerLeague",verifyToken("admin"), (req, res) => {
       return;
     }
     
-    console.log(results)
+    
     res.status(200).json({ message: "Uspešno spremenjena liga igralca" });
   });
 });
@@ -2460,7 +2788,7 @@ app.post("/removePlayer",verifyToken("admin"), (req, res) => {
         .json({ error: "An error occurred while updating match result" });
       return;
     }
-    console.log(results)
+   
     res.status(200).json({ message: "Igralec uspešno odstranjen!" });
   });
 });
@@ -2684,7 +3012,8 @@ app.get("/unplayedMatches", (req, res) => {
     s.week,
     s.deadline,
     s.home_player as home_player_s_id,
-    s.away_player as away_player_s_id
+    s.away_player as away_player_s_id,
+    s.admin_comment
 FROM 
     schedule s
 JOIN 
@@ -2745,7 +3074,7 @@ app.get("/getUsers",verifyToken("admin"), (req, res) => {
         .json({ error: "An error occurred while fetching players" });
       return;
     }
-    console.log(results)
+   
     res.json(results);
   });
 });
@@ -2765,7 +3094,7 @@ app.post("/linkplayer",verifyToken("admin"), (req, res) => {
   });
 });
 app.post("/createSeason",verifyToken("admin") ,(req, res) => {
-  console.log(req.body.data)
+  
  let { year, start_date,end_date } = req.body.data;
    start_date = Math.floor(new Date(start_date).getTime()/1000);
    end_date = Math.floor(new Date(end_date).getTime()/1000);
@@ -2786,7 +3115,7 @@ app.post("/createSeason",verifyToken("admin") ,(req, res) => {
   });
 });
 app.post("/updateSeason", verifyToken("admin"),(req, res) => {
-  console.log(req.body.data)
+ 
  let { year, start_date,end_date,status,standings_status,promotion } = req.body.data;
    start_date = Math.floor(new Date(start_date).getTime()/1000);
    end_date = Math.floor(new Date(end_date).getTime()/1000);
@@ -2824,10 +3153,10 @@ app.post("/register", (req, res) => {
         res.status(500).json({ error: "error inserting user" });
         return;
       } else {
-        console.log(results.affectedRows>0)
-        console.log(results)
+      
         if(results.affectedRows>0){
           sendEmail(email,message)
+          sendEmail("krizaniczan@gmail.com","Novi uporabnik "+name+" "+email)
           res.json(results);
         }
         
@@ -2870,9 +3199,144 @@ app.post("/login", (req, res) => {
     }
   });
 });
+
+app.post("/request-reset", (req, res) => {
+  const { email,domain } = req.body;
+  const query = "SELECT * FROM users WHERE email=?";
+ 
+  connection.query(query, [email], (err, results) => {
+    if (err) {
+      console.error("Error fetching players:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while fetching players" });
+      return;
+    }
+    if(results==""){
+      res.status(401).send("Uporabnik ne obstaja")
+      return
+    }
+    console.log(domain)
+     const token = jwt.sign(
+        {
+          email: email,
+          
+        },
+        process.env.secret,
+        { expiresIn: "24h" }
+      );
+    // if (results[0].email && bcrypt.compareSync(password, results[0].password)) {
+    //   const token = jwt.sign(
+    //     {
+    //       email: results[0].email,
+    //       role: results[0].role,
+    //       name: results[0].name,
+    //       id: results[0].id,
+    //     },
+    //     process.env.secret,
+    //     { expiresIn: "24h" }
+    //   );
+    //   // sendEmail();
+    //   res.send({ token });
+    // } else {
+    //   res.status(401).send("Napačno geslo!");
+    // }
+      const query = "SELECT * FROM users WHERE email=?";
+ 
+  connection.query(query, [email], (err, results) => {
+    if (err) {
+      console.error("Error fetching players:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while fetching players" });
+      return;
+    }
+    sendEmail("krizaniczan@gmail.com","http://localhost:4200/resetpassword?token="+token,"asd")
+    res.send("")
+  });
+});
+})
+app.post("/verifyresettoken", (req, res) => {
+  const { token } = req.body;
+  console.log(req.body)
+   const decoded = jwt.verify(token, process.env.secret);
+   console.log(decoded)
+  res.send(decoded)
+    // if (results[0].email && bcrypt.compareSync(password, results[0].password)) {
+    //   const token = jwt.sign(
+    //     {
+    //       email: results[0].email,
+    //       role: results[0].role,
+    //       name: results[0].name,
+    //       id: results[0].id,
+    //     },
+    //     process.env.secret,
+    //     { expiresIn: "24h" }
+    //   );
+    //   // sendEmail();
+    //   res.send({ token });
+    // } else {
+    //   res.status(401).send("Napačno geslo!");
+    // }
+  
+  
+})
+
+app.post("/resetpassword", (req, res) => {
+  const { token,password } = req.body;
+   const hashedPassword = bcrypt.hashSync(password, 8);
+   const decoded = jwt.verify(token, process.env.secret);
+   console.log(decoded)
+ const query = "UPDATE users SET password=? WHERE email=?";
+ 
+  connection.query(query, [hashedPassword,decoded.email], (err, results) => {
+    console.log(results)
+    if (err) {
+      console.error("Error fetching players:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while fetching players" });
+      return;
+    }
+   
+    if(results.affectedRows==1){
+      res.status(200).json("geslo uspešno posodobljeno!")
+    }
+
+  
+  
+
+})
+
+})
+app.post("/updateComment", (req, res) => {
+  const { id,comment } = req.body;
+  console.log(req.body)
+ const query = "UPDATE schedule SET admin_comment=? WHERE id=?";
+ 
+  connection.query(query, [comment,id], (err, results) => {
+    console.log(results)
+    if (err) {
+      console.error("Error fetching players:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while fetching players" });
+      return;
+    }
+   
+    if(results.affectedRows==1){
+      res.status(200).json("komentar uspešno dodan!")
+    }
+
+  
+  
+
+})
+
+})
 app.post("/registerForLeagueNonUserPlayers", (req, res) => {
   const { fullName, phoneNumber, email, gender, password } = req.body.form;
-console.log(req.body)
+
  let league_id;
     if (gender == "ž") {
       league_id = 6; // Women's league ID
@@ -3097,7 +3561,7 @@ app.post("/registerForLeagueRegisteredPlayers",verifyToken("user"), (req, res) =
   const phone=req.body.form.phoneNumber
   const gender=req.body.form.gender
   const seasonId = 4; // Example season ID
-console.log(req.body)
+
   // Step 1: Check if the player exists and retrieve their player_id using the known user_id
   const findPlayerQuery = `
     SELECT *,players.id as id_player
@@ -3119,7 +3583,7 @@ console.log(req.body)
         INSERT INTO players (name,user_id,phone,email,gender) 
         VALUES (?,?,?,?,?)
       `;
-      console.log(name,userId,phone,email)
+      
 
       connection.query(insertPlayerQuery, [name,userId,phone,email,gender], (err, insertResult) => {
         if (err) {
@@ -3139,7 +3603,7 @@ console.log(req.body)
     } else {
    let gender1=playerResults[0].gender
       const playerId = playerResults[0].id_player; 
-        console.log(gender)
+       
       registerPlayerForLeague(playerId, seasonId, res,gender1);
     }
   });
@@ -3204,14 +3668,14 @@ function registerPlayerForLeague(playerId, seasonId, res,gender) {
           VALUES (?, ?, ?)
          
         `;
-        console.log(playerId, newLeagueId, seasonId)
+       
         connection.query(insertPlayersSeasonQuery, [playerId, newLeagueId, seasonId], (err, result) => {
           if (err) {
             console.error("Error inserting into players_season:", err);
             res.status(500).json({ error: "Error inserting into players_season" });
             return;
           }
-          console.log(result)
+          
           console.log("Player successfully registered for the league and season");
           res.status(200).json({ message: "Player registered successfully!" });
         });

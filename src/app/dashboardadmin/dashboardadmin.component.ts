@@ -14,12 +14,20 @@ import { ActivatedRoute, Params } from '@angular/router';
 import { map } from 'rxjs/internal/operators/map';
 import { AuthService } from '../auth.service';
 import { SeasonService } from '../season.service';
+import { animate, state, style, transition, trigger } from '@angular/animations';
 @Component({
   selector: 'app-dashboardadmin',
   standalone: true,
   imports:[MatFormFieldModule,MatSelectModule,MatSelect,FormsModule,MatTableModule,MatPaginatorModule,CommonModule,ReactiveFormsModule,MatInputModule ],
   templateUrl: './dashboardadmin.component.html',
-  styleUrl: './dashboardadmin.component.css'
+  styleUrl: './dashboardadmin.component.css',
+    animations: [
+      trigger('detailExpand', [
+        state('collapsed', style({ height: '0px', minHeight: '0', display: 'none' })),
+        state('expanded', style({ height: '*', display: 'block' })),
+        transition('expanded <=> collapsed', animate('225ms ease-in-out')),
+      ]),
+    ],
 })
 export class DashboardadminComponent {
   matches: TennisMatch[] = [];
@@ -37,12 +45,14 @@ export class DashboardadminComponent {
   selectedWeek: number | string = '';
   selectedLeagueId: number =1;
   matchesleft:number=0
+  expandedElement: any | null = null;
   hideNoResults: boolean = false;
   @ViewChild('resultInput') resultInput!: ElementRef;
   @ViewChild('paginator1') paginator1!: MatPaginator;
   @ViewChild('paginator2') paginator2!: MatPaginator;
   @ViewChild('paginator3') paginator3!: MatPaginator;
   resultForm: FormGroup;
+  comment: FormGroup;
   editingMatch: any = null; 
  season: number =1
  season_status:any
@@ -76,6 +86,23 @@ this.season_status=data
 this.loaded=true
 }
   })
+}
+ formatResultInput(event: Event): void {
+ 
+  const input = event.target as HTMLInputElement;
+  let raw = input.value.replace(/[^0-9]/g, ''); // Keep only digits
+
+  let formatted = '';
+  for (let i = 0; i < raw.length; i += 2) {
+    if (i > 0) formatted += ','; // separate sets with comma
+    formatted += raw[i];
+    if (i + 1 < raw.length) {
+      formatted += '-' + raw[i + 1];
+    }
+  }
+
+  input.value = formatted;
+  this.resultForm.controls['newResult'].setValue(formatted, { emitEvent: false });
 }
 ngAfterViewInit() {
   this.dataSource.paginator = this.paginator1;
@@ -156,6 +183,9 @@ onLeagueChange(): void {
     this.resultForm = this.fb.group({
       newResult: ['', [Validators.required, this.tennisScoreValidator]]
     });
+      this.comment = this.fb.group({
+      comment: ['', [Validators.required]]
+    });
 
    }
    checkNames(name:string){
@@ -178,6 +208,18 @@ onLeagueChange(): void {
           this.editingMatch.result = updatedResult;
           this.editingMatch = null;
           this.calculateStandings()
+        });
+      }
+    }
+       updateComment(matchId: any): void {
+     
+      if (this.comment.valid) {
+        const updatedResult = this.comment.value.comment;
+         
+        // Call your service to update the result
+        this.matchService.updateComment(matchId, updatedResult).subscribe(() => {
+      
+        
         });
       }
     }
@@ -396,5 +438,24 @@ onLeagueChange(): void {
   editPlayerStanding(row: any): void {
     // Handle logic to edit player's standing
    
+  }
+   expandedRows = new Set<any>(); // Or use Array if preferred
+
+  // Method to toggle the expanded state for a row
+  toggleRowExpansion(row: any): void {
+    if (this.isRowExpanded(row)) {
+      this.expandedRows.delete(row);  // Collapse row if it's already expanded
+    } else {
+          this.comment.patchValue({
+        comment: row.admin_comment
+      });
+        this.expandedRows.clear();
+      this.expandedRows.add(row);     // Expand row
+    }
+  }
+
+  // Method to check if a row is expanded
+  isRowExpanded(row: any): boolean {
+    return this.expandedRows.has(row);  // Check if the row is expanded
   }
 }

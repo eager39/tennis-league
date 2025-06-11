@@ -29,6 +29,29 @@ export class AuthService {
   logout() {
     localStorage.removeItem('token');
   }
+  sendResetLink(email: string) {
+      const body = {
+    email: email,
+    domain: this.apiUrl  // or extract domain part if needed
+  };
+  return this.http.post(`${this.apiUrl}/request-reset`,  body );
+}
+  checktoken(token: string) {
+       const body = {
+    token: token,
+     // or extract domain part if needed
+  };
+  return this.http.post(`${this.apiUrl}/verifyresettoken`,  body );
+}
+  resetpassword(token: string,password: string) {
+       const body = {
+    password: password,
+    token: token
+     // or extract domain part if needed
+  };
+  return this.http.post(`${this.apiUrl}/resetpassword`,  body );
+}
+  
   
 
   isAuthenticated(): boolean {
@@ -47,7 +70,7 @@ export class AuthService {
     }
     const decodedToken = this.jwtHelper.decodeToken(token);
 
-    return decodedToken.role ? decodedToken.role : "";
+    return decodedToken.role ? decodedToken.role :[];
   }
   getUserId(): number {
     const token = this.getToken();
@@ -82,7 +105,7 @@ export class AuthService {
       return true
     }
     if(this.compareNames(decodedToken.name,name)){
-      return decodedToken.role ? decodedToken.role : "";
+      return decodedToken.role ? decodedToken.role : false;
     }else{
       return false
     }

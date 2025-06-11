@@ -48,6 +48,12 @@ export class MatchService {
     });
     return this.http.post(environment.apiUrl+"/confirmResult", { 'id': matchId }, { headers });
   }
+  updateComment(matchId: number,comment:string): Observable<any> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    return this.http.post(environment.apiUrl+"/updateComment", { 'id': matchId ,"comment":comment}, { headers });
+  }
   forfeitMatch(matchId: number,result:string): Observable<any> {
     const headers = new HttpHeaders({
       'Content-Type': 'application/json'

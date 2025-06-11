@@ -51,15 +51,15 @@
         *ngIf="isRowExpanded(element) && element.tie_breaker_stats!='' &&element.matches_played!=0"
         [@detailExpand]="isRowExpanded(element) ? 'expanded' : 'collapsed'">
         
-        <div>
+        <div *ngIf="element.tie_breaker_stats &&  element.tieBreakerStats.wins">
           <strong>Trikotnik statistika:</strong>
-          <div> Zmage: {{element.tieBreakerStats.wins}} </div>
-          <div> Medsebojna razlika v osvojenih setih: {{element.tieBreakerStats.netSetsWon}} </div>
-          <div> Medsebojna razlika v osvojenih igrah: {{element.tieBreakerStats.netGamesWon}} </div>
+          <div> Zmage: {{element.tieBreakerStats?.wins}} </div>
+          <div> Medsebojna razlika v osvojenih setih: {{element.tieBreakerStats?.netSetsWon}} </div>
+          <div> Medsebojna razlika v osvojenih igrah: {{element.tieBreakerStats?.netGamesWon}} </div>
           <div> Nasprotniki:
             <ul>
-              <li *ngFor="let opponent of element.tieBreakerStats.opponents">
-                {{opponent.opponent}} - Rezultat:{{opponent.sets}} {{opponent.result}} (Št.nizov: {{opponent.netSetsWon}}, Igre: {{opponent.netGamesWon}})
+              <li *ngFor="let opponent of element.tieBreakerStats?.opponents">
+                {{opponent?.opponent}} - Rezultat:{{opponent?.sets}} {{opponent?.result}} (Št.nizov: {{opponent?.netSetsWon}}, Igre: {{opponent?.netGamesWon}})
               </li>
             </ul>
           </div>
