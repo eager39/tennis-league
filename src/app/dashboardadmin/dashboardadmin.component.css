@@ -11,3 +11,29 @@
   .mat-elevation-z8 {
     margin: 10px 0;
   }
+  .group-border td {
+  border-top: 2px dashed orange; /* or whatever color you want */
+}
+ .group-border2 td {
+  border-top: 3px solid green; /* or whatever color you want */
+}
+
+.normal-border td {
+  border-top: 1px solid gray;  /* or whatever your normal border looks like */
+}
+.mat-mdc-cell, .mat-mdc-header-cell {
+    border: none;
+}
+
+
+.material-symbols-sharp {
+  font-variation-settings:
+  'FILL' 1,
+  'wght' 100,
+  'GRAD' -25,
+  'opsz' 48
+}
+.icon{
+  color:blue;
+vertical-align: middle;
+}

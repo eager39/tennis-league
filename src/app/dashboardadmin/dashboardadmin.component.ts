@@ -15,10 +15,11 @@ import { map } from 'rxjs/internal/operators/map';
 import { AuthService } from '../auth.service';
 import { SeasonService } from '../season.service';
 import { animate, state, style, transition, trigger } from '@angular/animations';
+import { MatIconModule } from '@angular/material/icon';
 @Component({
   selector: 'app-dashboardadmin',
   standalone: true,
-  imports:[MatFormFieldModule,MatSelectModule,MatSelect,FormsModule,MatTableModule,MatPaginatorModule,CommonModule,ReactiveFormsModule,MatInputModule ],
+  imports:[MatFormFieldModule,MatIconModule,MatSelectModule,MatSelect,FormsModule,MatTableModule,MatPaginatorModule,CommonModule,ReactiveFormsModule,MatInputModule ],
   templateUrl: './dashboardadmin.component.html',
   styleUrl: './dashboardadmin.component.css',
     animations: [
@@ -38,7 +39,7 @@ export class DashboardadminComponent {
   players: string[] = [];
   weeks: string[] = [];
   leagues: any[] = [];
-  displayedColumns: string[] = ['week', 'home_player', 'away_player', 'result','deadline','penalty'];
+  displayedColumns: string[] = ['week','league' ,'home_player', 'away_player', 'result','deadline','penalty'];
   displayedColumns2: string[] = ['league',  'points', 'actions'];
   displayedColumns3: string[] = ['name',  'position', 'status','league'];
   selectedPlayer: string = '';
@@ -458,4 +459,14 @@ onLeagueChange(): void {
   isRowExpanded(row: any): boolean {
     return this.expandedRows.has(row);  // Check if the row is expanded
   }
+  isGroupBorder(row: any): boolean {
+  const index = this.dataSource.filteredData.indexOf(row);
+  return index > 0 && row.league_id !== this.dataSource.filteredData[index - 1]?.league_id;
+}
+isGroupBorder2(row: any): boolean {
+  const index = this.dataSource.filteredData.indexOf(row);
+  return index > 0 && row.week !== this.dataSource.filteredData[index - 1]?.week;
+}
+
+
 }

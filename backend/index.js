@@ -774,7 +774,7 @@ WHERE s.result = "No result"
   AND ps_home.season_id = ?
   AND s.deadline < (UNIX_TIMESTAMP()*1000 + 0 * 24 * 60 * 60*1000)
   and ps_home.league_id!=6
-ORDER BY s.week ASC;
+ORDER BY s.week ASC,ps_home.league_id asc,hp.name asc;
   `;
 
   return new Promise((resolve, reject) => {
@@ -1878,10 +1878,13 @@ app.get("/getmatches/:leagueId", (req, res) => {
      SELECT 
     s.id,
     ps_home.player_id AS home_player_id,
+    s.home_player as home_player_s_id,
     hp.name AS home_player,
     ps_away.player_id AS away_player_id,
+    s.away_player as away_player_s_id,
     ap.name AS away_player,
     s.result,
+    s.penalty,
     ps_home.league_id,
     s.week,
     s.deadline,
@@ -1901,7 +1904,7 @@ WHERE
     ps_home.league_id = ?
     AND ps_home.season_id = ?
 ORDER BY 
-    s.week `;
+    s.week asc,hp.name asc`;
  }else{
   query = `
      SELECT 
@@ -2758,6 +2761,22 @@ app.post("/applypenalty",verifyToken("admin"), (req, res) => {
     res.status(200).json({ message: "Match result updated successfully" });
   });
 });
+app.post("/removepenalty",verifyToken("admin"), (req, res) => {
+  const { id, matchid } = req.body;
+  const query = "UPDATE schedule SET penalty = null WHERE id = ?";
+
+  connection.query(query, [ matchid], (err, results) => {
+    if (err) {
+      console.error("Error updating match result:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating match result" });
+      return;
+    }
+
+    res.status(200).json({ message: "Match result updated successfully" });
+  });
+});
 app.post("/changePlayerLeague",verifyToken("admin"), (req, res) => {
   const { id, newleagueid } = req.body;
   
@@ -3028,7 +3047,7 @@ WHERE
     s.result="No result"
     AND ps_home.season_id = ?
 ORDER BY 
-    s.week ASC; 
+    s.week ASC,ps_home.league_id asc,hp.name asc; 
     `;
 
   connection.query(query, [seasonId], (err, data) => {
@@ -3137,7 +3156,7 @@ app.post("/updateSeason", verifyToken("admin"),(req, res) => {
 });
 app.post("/register", (req, res) => {
   users = [];
-  let message="Registracija uspešna! Za potrditev vašega računa kliknite na naslednji link: "
+  let message="Registracija uspešna!"
   const { name, phone, email, password,country,phonePrefix,gender } = req.body;
   const hashedPassword = bcrypt.hashSync(password, 8);
   users.push({ email, password: hashedPassword });
@@ -3190,7 +3209,7 @@ app.post("/login", (req, res) => {
           id: results[0].id,
         },
         process.env.secret,
-        { expiresIn: "24h" }
+        { expiresIn: "31d" }
       );
       // sendEmail();
       res.send({ token });
@@ -3223,7 +3242,7 @@ app.post("/request-reset", (req, res) => {
           
         },
         process.env.secret,
-        { expiresIn: "24h" }
+        { expiresIn: "1h" }
       );
     // if (results[0].email && bcrypt.compareSync(password, results[0].password)) {
     //   const token = jwt.sign(
@@ -3251,7 +3270,7 @@ app.post("/request-reset", (req, res) => {
         .json({ error: "An error occurred while fetching players" });
       return;
     }
-    sendEmail("krizaniczan@gmail.com","http://localhost:4200/resetpassword?token="+token,"asd")
+    sendEmail("krizaniczan@gmail.com",process.env.host+"/resetpassword?token="+token,"Link za ponastavitev gesla!")
     res.send("")
   });
 });

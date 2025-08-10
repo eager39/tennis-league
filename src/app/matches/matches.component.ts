@@ -30,7 +30,7 @@ export class MatchesComponent implements OnInit, AfterViewInit {
   players: string[] = [];
   weeks: string[] = [];
   leagues: any[] = [];
-  displayedColumns: string[] = ['week', 'home_player', 'away_player', 'result','deadline'];
+  displayedColumns: string[] = ['week', 'home_player', 'away_player', 'result','penalty','deadline'];
 playerFilterControl = new FormControl('');
 weekFilterControl = new FormControl('');
 filteredPlayers: any = [];
@@ -53,6 +53,11 @@ filteredPlayers: any = [];
    }
 
   ngOnInit(): void {
+   if(this.AuthService.isAuthenticated() && this.AuthService.hasRole('admin')){
+    this.displayedColumns = ['week', 'home_player', 'away_player', 'result','penalty','deadline'];
+   }else{
+    this.displayedColumns= ['week', 'home_player', 'away_player', 'result','deadline'];
+   }
     this.fetchLeagues();
   //  this.loadMatches();
     this.route.params.subscribe(
@@ -97,7 +102,26 @@ filteredPlayers: any = [];
   
 }
 
-
+penalty(id:any,matchid:number){
+  this.leagueService.applypenalty(id,matchid).subscribe((data) => {
+   
+if(data){
+  alert("Kazenska točka dodeljena")
+  this.calculateStandings()
+this.loadMatches()
+}
+  })
+}
+removepenalty(id:any,matchid:number){
+  this.leagueService.removepenalty(id,matchid).subscribe((data) => {
+   
+if(data){
+  alert("Kazenska točka izbrisana")
+  this.calculateStandings()
+  this.loadMatches()
+}
+  })
+}
 removeAllMatches(){
  
   

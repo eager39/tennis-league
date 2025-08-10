@@ -102,6 +102,40 @@
       </div>
     </td>
   </ng-container>
+    <ng-container *ngIf="AuthService.isAuthenticated() && AuthService.hasRole('admin')" matColumnDef="penalty">
+    <th mat-header-cell *matHeaderCellDef> Kazenska točka </th>
+    <td mat-cell *matCellDef="let match">
+      <ng-container *ngIf="match.penalty==null">
+      <span
+        style="cursor: pointer; color: blue; margin-right: 10px;"
+        (click)="penalty(match.home_player_s_id, match.id)">
+        {{ match.home_player }}
+      </span>
+      |
+      <span
+        style="cursor: pointer; color: green; margin-left: 10px;"
+        (click)="penalty(match.away_player_s_id, match.id)">
+        {{ match.away_player }}
+      </span>
+     </ng-container>
+      <ng-container *ngIf="match.penalty==match.home_player_s_id">
+     <span
+        style="cursor: pointer; color: blue; margin-right: 10px;"
+        (click)="removepenalty(match.home_player_s_id, match.id)">
+        {{ match.home_player }}
+      </span>
+  </ng-container>
+    <ng-container *ngIf="match.penalty==match.away_player_s_id">
+     <span
+        style="cursor: pointer; color: blue; margin-right: 10px;"
+        (click)="removepenalty(match.away_player_s_id, match.id)">
+        {{ match.away_player }}
+      </span>
+  </ng-container>
+  
+    </td>
+  </ng-container>
+ 
   <ng-container matColumnDef="deadline">
     <th mat-header-cell *matHeaderCellDef> Rok za tekmo </th>
     <td mat-cell *matCellDef="let match"> {{ match.deadline| date: 'dd-MM-yyyy' }} </td>

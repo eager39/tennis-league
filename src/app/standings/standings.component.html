@@ -21,15 +21,15 @@
     <th mat-header-cell *matHeaderCellDef> Točke </th>
     <td mat-cell *matCellDef="let element"> {{element.points}} </td>
   </ng-container>
-
+<ng-container matColumnDef="netSetsWon">
+    <th mat-header-cell *matHeaderCellDef> Razlika v nizih </th>
+    <td mat-cell *matCellDef="let element"> {{element.netSetsWon}} </td>
+  </ng-container>
   <ng-container matColumnDef="netGamesWon">
     <th mat-header-cell *matHeaderCellDef> Razlika v igrah </th>
     <td mat-cell *matCellDef="let element"> {{element.netGamesWon}} </td>
   </ng-container>
-  <ng-container matColumnDef="netSetsWon">
-    <th mat-header-cell *matHeaderCellDef> Razlika v nizih </th>
-    <td mat-cell *matCellDef="let element"> {{element.netSetsWon}} </td>
-  </ng-container>
+  
   <ng-container matColumnDef="setsPlayed">
     <th mat-header-cell *matHeaderCellDef> Število odigranih nizov </th>
     <td mat-cell *matCellDef="let element"> {{element.setsPlayed}} </td>

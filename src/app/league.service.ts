@@ -63,6 +63,10 @@ downloadFile(fileName: string, league: number): Observable<Blob> {
   
     return this.http.post(environment.apiUrl+"/applypenalty", { 'id': playerid,'matchid':matchid });
   }
+   removepenalty(playerid: number,matchid:number): Observable<any> {
+  
+    return this.http.post(environment.apiUrl+"/removepenalty", { 'id': playerid,'matchid':matchid });
+  }
   changeLeagueforPlayer(id: number,newleagueid:number): Observable<any> {
   
     return this.http.post(environment.apiUrl+"/changePlayerLeague", { 'id': id,"newleagueid":newleagueid});

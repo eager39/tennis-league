@@ -28,7 +28,7 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
 export class StandingsComponent implements OnInit {
   standings: any[] = [];
   filteredStandings: any[] = [];
-  displayedColumns: string[] = ['position','player', 'points', 'netGamesWon','setsPlayed','netSetsWon', 'games_played','penalty'];
+  displayedColumns: string[] = ['position','player', 'points', 'netSetsWon','netGamesWon','setsPlayed','games_played','penalty'];
   leagues: any[] = []; // Array to hold leagues data
   selectedLeague: string='' 
   myParam: any;
