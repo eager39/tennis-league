@@ -2941,11 +2941,11 @@ app.post("/checkstatus",verifyToken("admin"), (req, res) => {
 
 app.get("/leagues", (req, res) => {
   const seasonId = req.headers.season;
-
+console.log(seasonId)
   const query = `
        SELECT DISTINCT ps.league_id, l.*
-FROM schedule s
-JOIN players_season ps ON ps.id = s.home_player OR ps.id = s.away_player
+FROM players_season ps
+
 JOIN leagues l ON ps.league_id = l.id
 WHERE ps.season_id = ?;
     `;
@@ -2958,7 +2958,7 @@ WHERE ps.season_id = ?;
         .json({ error: "An error occurred while fetching played leagues" });
       return;
     }
-
+    console.log(results)
     res.json(results);
   });
 });
@@ -3439,9 +3439,10 @@ app.post("/registerForLeagueNonUserPlayers", (req, res) => {
               if (leagueResults.length > 0) {
                 const newLeagueId = leagueResults[0].id;
                 console.log('New league ID for tier', currentTier, 'is', newLeagueId);
-
+                console.log("haha")
                 // Step 4: Insert or update the player in the players_season table
                 insertIntoPlayersSeason(playerId, newLeagueId, seasonId, callback);
+               
               } else {
                 console.error('No league found for the adjusted tier');
                 callback('No league found for the adjusted tier', null);
@@ -3511,6 +3512,7 @@ app.post("/registerForLeagueNonUserPlayers", (req, res) => {
             });
           } else {
             // If no password, just insert into players_season table
+            
             insertIntoPlayersSeason(playerId, leagueId, seasonId, callback);
           }
         });
@@ -3528,8 +3530,9 @@ app.post("/registerForLeagueNonUserPlayers", (req, res) => {
     connection.query(insertPlayersSeasonQuery, [playerId, leagueId, seasonId], (err, result) => {
       if (err) {
         console.error('Error inserting into players_season:', err);
+        console.log("PODVOJENA PRIJAVA")
         callback(err, null);
-        return;
+        return
       }
 
       console.log('Player registered for league and season');
@@ -3561,12 +3564,15 @@ app.post("/registerForLeagueNonUserPlayers", (req, res) => {
 
   // Example usage
   
-  const seasonId = 4; // Example season ID
+  const seasonId = 8; // Example season ID
 
   registerPlayerForLeague(fullName, league_id, seasonId, phoneNumber, email, password, (err, result) => {
     if (err) {
       console.error('Error registering player:', err);
-      //res.status(400).json({ error: err });
+      if(err.errno=="1062"){
+        message="Enaka prijava že obstaja!"
+      }
+      res.status(400).json({ error: err,message: message });
     } else {
       console.log('Player registration successful:', result);
       res.status(200).json({ message: 'Player registered successfully!' });

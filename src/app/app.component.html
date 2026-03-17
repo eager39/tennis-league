@@ -1,7 +1,7 @@
-<app-sidenav></app-sidenav>
+<app-sidenav *ngIf="!hideNavbar"></app-sidenav>
 
 <div class="content">
-  <app-seasonselector></app-seasonselector>
+  <app-seasonselector *ngIf="!hideNavbar"></app-seasonselector>
   <router-outlet></router-outlet>
 </div>
 <loading-indicator [detectRouteTransitions]="true"/>

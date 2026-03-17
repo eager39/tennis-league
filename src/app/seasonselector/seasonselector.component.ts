@@ -3,7 +3,8 @@ import { SeasonService } from '../season.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs';
 @Component({
   selector: 'app-seasonselector',
   standalone: true,
@@ -15,7 +16,9 @@ export class SeasonselectorComponent {
   // Example seasons
   currentSeason: number=1;
 seasons :any[]=[]
-  constructor(private seasonService: SeasonService,private router: Router) {
+  hideLayout:any;
+  
+  constructor(private seasonService: SeasonService,private router: Router,private route: ActivatedRoute) {
     this.seasonService.currentSeason$.subscribe(season => this.currentSeason = season);
   }
   ngOnInit(): void {
@@ -24,6 +27,19 @@ seasons :any[]=[]
      
     })
     
+   this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => {
+
+        let currentRoute = this.route.firstChild;
+
+        while (currentRoute?.firstChild) {
+          currentRoute = currentRoute.firstChild;
+        }
+
+        this.hideLayout = currentRoute?.snapshot.data['hideLayout'] || false;
+
+      });
 }
 
 

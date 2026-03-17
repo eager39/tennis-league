@@ -1,4 +1,4 @@
-<div class="wrapper"*ngIf="!showform">Že ste prijavljeni v ligo</div>
+<!-- <div class="wrapper"*ngIf="!showform">Že ste prijavljeni v ligo</div>
 <div class="wrapper" *ngIf="showform" >
   <h2>Prijava v ligo 2025</h2>
   <form [formGroup]="signUpForm" (ngSubmit)="onSubmit()">
@@ -83,4 +83,284 @@
       Prijavi se v ligo
     </button>
   </div>
+</div>
+ -->
+
+<div class="page-container">
+
+
+
+
+
+  
+  <div class="wrapper">
+
+    <div class="header">
+      <div class="title">Prijava v ligo 2026</div>
+      <div class="subtitle">Teniški klub Gornja Radgona</div>
+    </div>
+<div class="frame-container" *ngIf="success || fail">
+ <div class="frame-div" *ngIf="success">
+
+      <div class="frame-child">
+        <img class="frame-icon" src="assets/tennis-ball.svg" alt="">
+      </div>
+
+      <div class="juhuhu-uspeno-ste">
+        Juhuhu! <br>
+        Uspešno ste se prijavili na turnir.
+      </div>
+
+    </div>
+     <div class="frame-div-fail" *ngIf="fail">
+
+      <div class="frame-child-fail">
+        <img class="frame-icon" src="assets/tennis-ball.svg" alt="">
+      </div>
+
+      <div >
+        Šment! <br>
+        Napaka pri prijavi.
+      </div>
+
+    </div>
+
+    <!-- BUTTON -->
+    <div class="submit-button-2" (click)="resetForm()">
+      Oddaj novo prijavo
+      <img src="assets/arrow-right.svg" alt="">
+    </div>
+<div class="version">V 1.0.0.</div>
+  </div>
+
+  <!-- VERSION -->
+  
+
+
+
+
+
+    <div *ngIf="!showform && fail==false && success==false">
+      Že ste prijavljeni v ligo
+    </div>
+
+    <div *ngIf="showform">
+
+      <form [formGroup]="signUpForm" (ngSubmit)="onSubmit()">
+
+        <!-- FULL NAME -->
+        <div class="input-group" *ngIf="!onlyphone">
+          <label>Ime in priimek <label class="required">*</label></label>
+
+          <div class="custom-input">
+            <input
+              placeholder="Vnesite ime in priimek"
+              formControlName="fullName"
+            />
+          </div>
+<div class="iconscircle-close-parent" *ngIf="signUpForm.get('fullName')?.invalid && signUpForm.get('fullName')?.touched">
+<img class="iconscircle-close" src="/assets/error-circle.svg" > <img>
+<div class="ime2">Napačni podatki.</div>
+</div>
+          <!-- <mat-error *ngIf="signUpForm.get('fullName')?.invalid && signUpForm.get('fullName')?.touched">
+          <img class="iconscircle-close" alt="">  Obvezno!
+          </mat-error> -->
+        </div>
+
+        <!-- EMAIL -->
+        <div class="input-group" *ngIf="!onlyphone">
+          <label>Email <label class="required">*</label></label>
+
+          <div class="custom-input">
+            <input
+              type="email"
+              placeholder="Vnesite e-poštni naslov"
+              formControlName="email"
+            />
+          </div>
+<div class="iconscircle-close-parent" *ngIf="signUpForm.get('email')?.invalid && signUpForm.get('email')?.touched">
+<img class="iconscircle-close" src="/assets/error-circle.svg" > <img>
+<div class="ime2"> Napačni format email naslova.</div>
+</div>
+          <!-- <mat-error *ngIf="signUpForm.get('email')?.invalid && signUpForm.get('email')?.touched">
+            Napačni format email naslova
+          </mat-error> -->
+        </div>
+
+        <!-- PHONE -->
+        <div class="input-group">
+          <label>Telefonska številka <label class="required">*</label></label>
+
+          <div class="custom-input">
+            <input
+              type="tel"
+              placeholder="Vnesite telefonsko številko"
+              formControlName="phoneNumber"
+            />
+          </div>
+
+         
+          <div class="iconscircle-close-parent" *ngIf="signUpForm.get('phoneNumber')?.invalid && signUpForm.get('phoneNumber')?.touched">
+<img class="iconscircle-close" src="/assets/error-circle.svg" > <img>
+<div class="ime2"> Napačna telefonska številka.</div>
+</div>
+        </div>
+
+        <!-- GENDER -->
+  <div class="input-group" *ngIf="!onlyphone">
+  <label>Spol <span class="required">*</span></label>
+
+  <!-- SELECT BOX -->
+  <div
+    class="text-input custom-input"
+    (click)="toggleDropdown()"
+    [class.selected]="signUpForm.get('gender')?.value"
+    (focusout)="closeDropdown()"
+    tabindex="0"
+     [class.ng-invalid]="signUpForm.get('gender')?.invalid"
+  [class.ng-touched]="signUpForm.get('gender')?.touched"
+  >
+    <div class="vnesite-ime-wrapper">
+      <div class="vnesite-ime">
+        {{ getGenderLabel() || 'Izberite spol' }}
+      </div>
+    </div>
+
+    <img class="text-input-child" src="/assets/dropdown-arrow.svg" alt="">
+  </div>
+
+  <!-- DROPDOWN -->
+  <div class="text-input-parent" *ngIf="dropdownOpen">
+
+    <div class="text-input2" (click)="selectGender('ž')">
+      <div class="dropdown-wrapper">
+        <div class="dropdown">Ženski</div>
+      </div>
+    </div>
+
+    <div class="text-input2" (click)="selectGender('m')">
+      <div class="dropdown-wrapper">
+        <div class="dropdown">Moški</div>
+      </div>
+    </div>
+
+    <!-- optional -->
+    <!--
+    <div class="text-input2" (click)="selectGender('n')">
+      <div class="dropdown-wrapper">
+        <div class="dropdown">Ne želim povedati</div>
+      </div>
+    </div>
+    -->
+
+  </div>
+
+  <!-- ERROR -->
+  <div
+    class="iconscircle-close-parent"
+    *ngIf="signUpForm.get('gender')?.invalid && signUpForm.get('gender')?.touched"
+  >
+    <img class="iconscircle-close" src="/assets/error-circle.svg">
+    <div class="ime2">Obvezno.</div>
+  </div>
+</div>
+        <!-- PASSWORD -->
+        <div *ngIf="signUpForm.get('createAccount')?.value" class="input-group">
+          <label>Geslo *</label>
+
+          <div class="custom-input">
+            <input
+              type="password"
+              placeholder="Vnesite geslo"
+              formControlName="password"
+            />
+          </div>
+
+        
+                <div class="iconscircle-close-parent" *ngIf="signUpForm.get('password')?.invalid && signUpForm.get('password')?.touched">
+<img class="iconscircle-close" src="/assets/error-circle.svg" > <img>
+<div class="ime2"> Gesli se ne ujemata.</div>
+</div>
+        </div>
+
+        <!-- PRIVACY CHECKBOX -->
+        <div class="privacy-row">
+
+          <label class="privacy-label">
+
+            <input
+              type="checkbox"
+              formControlName="privacyAccepted"
+              class="privacy-checkbox"
+            />
+
+            <span class="privacy-text">
+
+              Strinjam se z obdelavo mojih osebnih podatkov v skladu z
+
+              <a href="/privacy" class="privacy-link">
+                Politiko zasebnosti
+              </a>
+
+              in
+
+              <a href="/terms" class="privacy-link">
+                Splošnimi pogoji
+              </a>.
+
+              Razumem, da bodo moji podatki uporabljeni za namene organizacije turnirja.
+
+            </span>
+
+          </label>
+
+        </div>
+
+        <!-- SUBMIT -->
+        <div class="submit-button" *ngIf="!auth.isAuthenticated()">
+          <button type="submit" class="button"
+           [class.ng-invalid]="signUpForm.invalid"
+          [disabled]="signUpForm.invalid">
+           <label class="submit-button-label"> Prijava</label>
+          </button>
+        </div>
+
+      </form>
+
+      <div class="submit-button" *ngIf="auth.isAuthenticated()">
+        <button class="button" (click)="register(auth.getUserId())" [disabled]="signUpForm.invalid">
+          Prijavi se v ligo
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+  
+  <div class="frame-group">
+<div class="tk-gornja-radgona-1-parent">
+<img class="tk-gornja-radgona-1-icon" src="/assets/logo.png" alt="">
+<div class="povezave-parent">
+<div class="povezave">
+<div class="prijava-v-sistem-wrapper">
+<div class="prijava-v-sistem">Prijava portal</div>
+</div>
+<img class="iconsarrow-right-up" src="/assets/arrow-right-up.svg" alt="">
+</div>
+<div class="povezave">
+<div class="prijava-v-sistem-wrapper">
+<div class="prijava-v-sistem">Registracija portal</div>
+</div>
+<img class="iconsarrow-right-up" src="/assets/arrow-right-up.svg" alt="">
+</div>
+<div class="povezave">
+<div class="prijava-v-sistem-wrapper">
+<div class="prijava-v-sistem">Potrebujete pomoč?</div>
+</div>
+<img class="iconsarrow-right-up" src="/assets/arrow-right-up.svg" alt="">
+</div>
+</div>
+</div>
+</div>
+
 </div>

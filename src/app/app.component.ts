@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { RouterModule, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterModule, RouterOutlet } from '@angular/router';
 import { CommonModule, NgFor } from '@angular/common';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import {MatTableModule} from '@angular/material/table'
@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { SidenavComponent } from './sidenav/sidenav.component';
 import { SeasonselectorComponent } from "./seasonselector/seasonselector.component";
 import { LoadingIndicatorComponent } from "./loading-indicator/loading-indicator.component";
+import { filter } from 'rxjs';
 
 
 
@@ -28,6 +29,24 @@ import { LoadingIndicatorComponent } from "./loading-indicator/loading-indicator
   styleUrl: './app.component.css'
 })
 export class AppComponent {
+
+    constructor(private router: Router,private route: ActivatedRoute) { }
+  
+  hideNavbar: any=false;
   title = 'tennis-league';
- 
+ ngOnInit() {
+   this.router.events
+    .pipe(filter(e => e instanceof NavigationEnd))
+    .subscribe(() => {
+
+      let route = this.route;
+
+      while (route?.firstChild) {
+        route = route.firstChild;
+      }
+
+      this.hideNavbar = route?.snapshot.data['hideLayout'] || false;
+
+    });
+  }
 }

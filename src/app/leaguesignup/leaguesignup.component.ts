@@ -10,6 +10,7 @@ import { DataService } from '../data.service';
 import { AuthService } from '../auth.service';
 import { MatButton, MatButtonModule } from '@angular/material/button';
 import { LeaguesService } from '../league.service';
+
 @Component({
   selector: 'app-leaguesignup',
   standalone: true,
@@ -21,6 +22,9 @@ export class LeaguesignupComponent {
   signUpForm!: FormGroup;
 showform=true
 onlyphone=false
+dropdownOpen: any=false;
+success: any=false;
+fail: any;
   constructor(private fb: FormBuilder,private dataService: DataService,public auth:AuthService,private leagueService: LeaguesService) {}
 
   ngOnInit(): void {
@@ -36,7 +40,8 @@ onlyphone=false
       phoneNumber: ['', Validators.required],
       gender: ['', Validators.required],
       createAccount: [false],
-      password: ['']
+      password: [''],
+      privacyAccepted:['',Validators.required]
     });
 
     // Toggle password field validation based on the checkbox
@@ -55,10 +60,16 @@ onlyphone=false
       this.dataService.registerForLeague(this.signUpForm.value).subscribe({
         next: (data: any) => {
          if(data){
-          alert("Uspešno ste se prijavili v ligo")
+          this.success=true
+          this.showform=false
+          //alert("Uspešno ste se prijavili v ligo")
          }
+         
         },
         error: (error: any) => {
+          this.success=false
+          this.fail=true
+          this.showform=false
           console.error('Error fetching leagues:', error); // Error callback
         },
       })
@@ -66,6 +77,10 @@ onlyphone=false
     } else {
       console.error('Form is invalid');
     }
+  }
+  click:any=false
+  clicked(){
+this.click=true
   }
   register(id:any){
     
@@ -107,4 +122,42 @@ onlyphone=false
       },
     })
   }
+
+
+
+toggleDropdown(){
+  this.dropdownOpen = !this.dropdownOpen;
+  this.signUpForm.get('gender')?.markAsTouched();
+   this.signUpForm.get('gender')?.invalid;
+ 
+}
+
+closeDropdown(){
+  setTimeout(() => this.dropdownOpen = false, 100);
+}
+
+selectGender(value: string){
+  this.signUpForm.get('gender')?.setValue(value);
+  this.signUpForm.get('gender')?.markAsTouched();
+    this.signUpForm.get('gender')?.valid;
+  this.dropdownOpen = false;
+}
+
+getGenderLabel(){
+
+  const value = this.signUpForm.get('gender')?.value;
+
+  if(value === 'm') return 'Moški';
+  if(value === 'ž') return 'Ženski';
+  if(value === 'n') return 'Ne želim povedati';
+
+  return '';
+}
+resetForm(){
+  this.signUpForm.reset
+  this.showform=true
+  this.success=false
+}
+
+
 }

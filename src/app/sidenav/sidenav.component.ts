@@ -9,7 +9,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
-import { RouterModule, Routes }   from '@angular/router';
+import { ActivatedRoute, NavigationEnd, RouterModule, Routes }   from '@angular/router';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CommonModule } from '@angular/common';
@@ -18,6 +18,8 @@ import { MatFormField } from '@angular/material/form-field';
 import { LeaguesService } from '../league.service';
 import { SeasonService } from '../season.service';
 import { leagues, TennisMatch } from '../tennismatch.model';
+import { Router } from '@angular/router';
+import { filter } from 'rxjs';
 @Component({
   selector: 'app-sidenav',
   standalone: true,
@@ -30,7 +32,8 @@ export class SidenavComponent {
   seasons:any
   currentseason:any
   filteredSeasons: any[] = [];
-  constructor(public authService: AuthService,private leagueService: LeaguesService,private seasonService: SeasonService) { }
+  hideLayout:any;
+  constructor(public authService: AuthService,private leagueService: LeaguesService,private seasonService: SeasonService,private router: Router,private route: ActivatedRoute) { }
   
   ngOnInit(): void {
  this.fetchLeagues();
@@ -39,6 +42,20 @@ export class SidenavComponent {
  this.getSeasonInfo()
   this.fetchLeagues()
 });
+ 
+     this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => {
+
+        let currentRoute = this.route.firstChild;
+
+        while (currentRoute?.firstChild) {
+          currentRoute = currentRoute.firstChild;
+        }
+
+        this.hideLayout = currentRoute?.snapshot.data['hideLayout'] || false;
+
+      });
 }
 isInApril(): boolean {
   const d = new Date(Date());
