@@ -15,6 +15,9 @@ export class LeaguesService {
   getLeagues(): Observable<any[]> {
     return this.http.get<any[]>(`${environment.apiUrl}/leagues`);
   }
+  getsignups(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiUrl}/signups`);
+  }
 // sendpdfs(emails: string[]): Observable<Blob> {
 //   return this.http.post('https://localhost:8443/deadline', { emails }, {
 //     responseType: 'blob'

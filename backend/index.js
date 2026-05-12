@@ -56,7 +56,7 @@ https.createServer(options, app).listen(process.env.PORT, function (req, res) {
 });
 
 // Utility function to shuffle an array
-const mysqldump = require('mysqldump');
+
 
 
 const fsp = require('fs/promises');
@@ -3015,6 +3015,25 @@ app.get("/leagues/:id/players", (req, res) => {
     res.json(results);
   });
 });
+app.get("/signups", (req, res) => {
+ 
+  const query = `
+      SELECT  *
+      FROM prijave
+      ORDER BY datum DESC
+    `;
+
+  connection.query(query,  (err, results) => {
+    if (err) {
+      console.error("Error fetching players:", err);
+      res
+        .status(500)
+        .json({ error: "An error occurred while fetching players" });
+      return;
+    }
+    res.json(results);
+  });
+});
 app.get("/unplayedMatches", (req, res) => {
   const leagueId = req.query.leagueId;
   const seasonId = req.headers.season;
@@ -3270,7 +3289,7 @@ app.post("/request-reset", (req, res) => {
         .json({ error: "An error occurred while fetching players" });
       return;
     }
-    sendEmail("krizaniczan@gmail.com",process.env.host+"/resetpassword?token="+token,"Link za ponastavitev gesla!")
+    sendEmail(email,process.env.host+"/resetpassword?token="+token,"Link za ponastavitev gesla!")
     res.send("")
   });
 });
@@ -3365,7 +3384,19 @@ app.post("/registerForLeagueNonUserPlayers", (req, res) => {
   // Function to register a player for a league with tier adjustment based on promotion/relegation
   const registerPlayerForLeague = (fullName, leagueId, seasonId, phone, email, password, callback) => {
    
+ const insertPlayerQuery = 'INSERT INTO prijave (ime, phone, email,spol) VALUES (?, ?, ?,?)';
 
+        connection.query(insertPlayerQuery, [fullName, phone, email,gender], (err, result) => {
+          if (err) {
+            console.error('Error inserting player:', err);
+            callback(err, null);
+            return;
+          }
+let htmlBody = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body style=\"margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f4f4f4;\"><table align=\"center\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width:600px;background:#ffffff;margin-top:20px;border-radius:8px;overflow:hidden;\"><tr><td style=\"background:#4CAF50;color:#ffffff;padding:15px;text-align:center;font-size:20px;\">Potrditev prijave</td></tr><tr><td style=\"padding:20px;color:#333333;\"><p style=\"margin:0 0 15px;\">Zdravo, potrjujem prijavo za ligo Radgona 2026.</p><p style=\"margin:0 0 15px;\">Prosim preverite, da so spodnji podatki pravilni. V primeru, da niso, pokličite 040 578 277.</p><p style=\"margin:0 0 10px;\"><strong>Ime:</strong> " + fullName + "</p><p style=\"margin:0 0 10px;\"><strong>Telefon:</strong> " + phone + "</p></td></tr><tr><td style=\"background:#eeeeee;padding:10px;text-align:center;font-size:12px;color:#777777;\">© 2026 Liga Radgona</td></tr></table></body></html>";          
+sendEmail(email,htmlBody,"Prijava v ligo 2026")
+        
+})
+    
     // Step 1: Check if the player exists using either "first name last name" or "last name first name"
     const checkPlayerQuery = `
       SELECT id 
@@ -3567,12 +3598,13 @@ app.post("/registerForLeagueNonUserPlayers", (req, res) => {
   const seasonId = 8; // Example season ID
 
   registerPlayerForLeague(fullName, league_id, seasonId, phoneNumber, email, password, (err, result) => {
+    let text
     if (err) {
       console.error('Error registering player:', err);
       if(err.errno=="1062"){
-        message="Enaka prijava že obstaja!"
+        text="Enaka prijava že obstaja!"
       }
-      res.status(400).json({ error: err,message: message });
+      res.status(400).json({ error: err,message: text });
     } else {
       console.log('Player registration successful:', result);
       res.status(200).json({ message: 'Player registered successfully!' });

@@ -26,7 +26,8 @@ export class PlayersComponent implements OnInit {
   showleague=false;
   editplayers=false
   selectedplayerid:any
-  constructor(private leaguesService: LeaguesService,private route: ActivatedRoute,public authService: AuthService,private loadingService: LoadingService) {}
+  signups: any;
+  constructor(private leaguesService: LeaguesService,private route: ActivatedRoute,public authService: AuthService,private loadingService: LoadingService,public leagueService: LeaguesService) {}
 
   ngOnInit() {
     this.leaguesService.getLeagues().subscribe(data => {
@@ -35,8 +36,22 @@ export class PlayersComponent implements OnInit {
     this.route.params.subscribe(
       (params: Params) => {
         this.selectedLeagueId = params["id"];
+     if(this.selectedLeagueId=="vse"){
      
-       this.onLeagueChange()
+  this.leagueService.getsignups().subscribe({
+    next: (data: any) => {
+      this.players = data; // Success (next)
+    console.log(this.players)
+    },
+    error: (error: any) => {
+      console.error('Error fetching leagues:', error); // Error callback
+    },
+  });
+
+     }else{
+        this.onLeagueChange()
+     }
+     
       })
   }
 

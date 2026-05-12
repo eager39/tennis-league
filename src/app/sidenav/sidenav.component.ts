@@ -33,6 +33,7 @@ export class SidenavComponent {
   currentseason:any
   filteredSeasons: any[] = [];
   hideLayout:any;
+  signups: any;
   constructor(public authService: AuthService,private leagueService: LeaguesService,private seasonService: SeasonService,private router: Router,private route: ActivatedRoute) { }
   
   ngOnInit(): void {
@@ -75,6 +76,7 @@ fetchLeagues(): void {
     },
   });
 }
+
 getSeasonInfo(){
   this.seasonService.getSeasons().subscribe(data=>{
       this.seasons=data

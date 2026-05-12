@@ -173,7 +173,7 @@ body{
 /* CARD */
 
 .wrapper{
-  width:573px;
+  width: 30%;
   padding:40px;
 margin:80px;
 margin-bottom: 0px;
@@ -214,6 +214,8 @@ backdrop-filter: blur(50.1px);
   color:rgba(194,255,138,0.6);
   font-size:24px;
   font-family:Onest;
+   display: flex;
+  align-items: center;
 }
 
 /* INPUTS */
@@ -232,7 +234,7 @@ label{
 }
 
 .custom-input{
-  height:50px;
+  
   padding:12px 16px;
 
   border-radius:12px;
@@ -358,7 +360,7 @@ color: #ffb900;
 }
 .text-input {
   	width: 100%;
-  	height: 50px;
+  /* 	height: 50px; */
   	position: relative;
   	border-radius: 12px;
   	background-color: rgba(31, 54, 33, 0.6);
@@ -391,7 +393,7 @@ color: #ffb900;
 
 
 .text-input-parent {
-  	width: 488px;
+  	/* width: 488px; */
   	position: relative;
   	border-radius: 12px;
   	border: 1px solid #598f71;
@@ -568,17 +570,6 @@ align-items: center;
 padding: 12px 36px 12px 12px;
 gap: 24px;
 }
-.frame-div-fail{
-  box-shadow: 0px 5.55555534362793px 9.58px rgba(44, 66, 37, 0.4);
-  align-self: stretch;
-
-border-radius: 69.44px;
-background-color: #fff;
-display: flex;
-align-items: center;
-padding: 12px 36px 12px 12px;
-gap: 24px;
-}
 
 .frame-child{
   padding:22px;
@@ -611,22 +602,86 @@ gap: 24px;
   align-items:center;
   justify-content:center;
 
-  box-shadow: inset 0px -3px 6px #AAD82D;
+  box-shadow: inset 0px -3px 6px #FFB900;
 }
 .submit-button-2{
-  width:100%;
+ 
   padding:16px;
   background:#D2FF50;
   border-radius:12px;
-
+  
   display:flex;
   justify-content:center;
   align-items:center;
   gap:12px;
-
+margin-top:auto;
   font-weight:700;
   cursor:pointer;
 }
+
+
+.frame-container{
+  display:flex;
+  flex-direction:column;
+  height:60vh;
+}
+.page-container.is-phone-portrait {
+   margin: 0;
+   padding:0;
+}
+.wrapper.is-phone-portrait {
+ width: 100%;
+ margin:20px;
+}
+.frame-group.is-phone-portrait {
+ display: none;
+}
+.tk-gornja-radgona-1-icon2.is-phone-portrait {
+width: 56%;
+position: relative;
+max-height: 100%;
+object-fit: cover;
+
+display: block;
+
+}
+.subtitle.is-phone-portrait {
+font-size: 10px;
+
+}
+.title.is-phone-portrait {
+font-size: 20px;
+margin:0;
+}
+.header.is-phone-portrait {
+   display: flex;
+  flex-direction: row;
+  align-items: stretch;
+
+}
+.tk-gornja-radgona-1-icon2{
+  display: none;
+}
+.logo.is-phone-portrait {
+  width: 30%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.header.is-phone-portrait .left {
+  width: 70%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.header.is-phone-portrait .right {
+  width: 30%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
 
 
 

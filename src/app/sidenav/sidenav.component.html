@@ -35,7 +35,7 @@
               </app-sidenav-link>
             </mat-expansion-panel-header>
             <app-sidenav-link *ngFor="let league of leagues"  [routerLink]="'/players/' + league.id"><span>{{league.name}}</span></app-sidenav-link>
-          
+           <app-sidenav-link  [routerLink]="'/players/'+ 'vse'" *ngIf=" authService.isAuthenticated() && authService.hasRole('admin')"><span>vse prijave</span></app-sidenav-link>
           </mat-expansion-panel>
 
           <mat-expansion-panel>

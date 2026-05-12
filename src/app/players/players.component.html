@@ -5,11 +5,33 @@
     <option *ngFor="let league of leagues" [value]="league.id">{{ league.name }}</option>
   </select>
 </div> -->
-<div>
+<div *ngIf="selectedLeagueId=='vse'">
   <h2>Igralci <button (click)="edit()" *ngIf="authService.isAuthenticated() && authService.hasRole('admin')">Urejaj igralce</button></h2>
   <ul>
+   
     <li *ngFor="let player of players" >
-      {{ player.name }} 
+      {{ player.name || player.ime  }} <p style="color:green">DATUM PRIJAVE:  <br/> {{player.datum  | date:'medium'}}</p> 
+      <span *ngIf="editplayers && authService.isAuthenticated() && authService.hasRole('admin')">
+      <mat-icon (click)="changeleague(player.id) " aria-hidden="false" aria-label="Example home icon" fontIcon="edit"></mat-icon>
+      <mat-icon (click)="removeplayer(player.id) " aria-hidden="false" aria-label="Example home icon" fontIcon="delete"></mat-icon>
+    </span>
+      <mat-form-field *ngIf="showleague && player.id === selectedplayerid && authService.isAuthenticated() && authService.hasRole('admin')"> 
+        <mat-label>Liga</mat-label>
+        <mat-select [(value)]="newleagueid" (selectionChange)="updateLeague()">
+          <mat-option *ngFor="let league of leagues" [value]="league.id" [disabled]="league.id === player.league_id">
+            {{ league.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </li>
+  </ul>
+</div>
+<div *ngIf="selectedLeagueId!='vse'">
+  <h2>Igralci <button (click)="edit()" *ngIf="authService.isAuthenticated() && authService.hasRole('admin')">Urejaj igralce</button></h2>
+  <ul>
+   
+    <li *ngFor="let player of players" >
+      {{ player.name   }} 
       <span *ngIf="editplayers && authService.isAuthenticated() && authService.hasRole('admin')">
       <mat-icon (click)="changeleague(player.id) " aria-hidden="false" aria-label="Example home icon" fontIcon="edit"></mat-icon>
       <mat-icon (click)="removeplayer(player.id) " aria-hidden="false" aria-label="Example home icon" fontIcon="delete"></mat-icon>

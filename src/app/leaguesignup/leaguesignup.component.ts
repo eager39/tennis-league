@@ -10,6 +10,7 @@ import { DataService } from '../data.service';
 import { AuthService } from '../auth.service';
 import { MatButton, MatButtonModule } from '@angular/material/button';
 import { LeaguesService } from '../league.service';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 
 @Component({
   selector: 'app-leaguesignup',
@@ -25,14 +26,28 @@ onlyphone=false
 dropdownOpen: any=false;
 success: any=false;
 fail: any;
-  constructor(private fb: FormBuilder,private dataService: DataService,public auth:AuthService,private leagueService: LeaguesService) {}
+  isPhonePortrait: any=false;
+
+  constructor(private fb: FormBuilder,private dataService: DataService,public auth:AuthService,private leagueService: LeaguesService,private responsive: BreakpointObserver) {}
 
   ngOnInit(): void {
+    
     if(this.auth.isAuthenticated()){
       this.ifalreadyinleague();
     }else{
       this.showform=true
     }
+      this.responsive.observe(Breakpoints.HandsetPortrait)
+      .subscribe(result => {
+
+        this.isPhonePortrait = false; 
+        
+        if (result.matches) {
+          this.isPhonePortrait = true;
+          console.log(this.isPhonePortrait)
+        }
+         
+      })
 
     this.signUpForm = this.fb.group({
       fullName: ['', Validators.required],
@@ -157,6 +172,7 @@ resetForm(){
   this.signUpForm.reset
   this.showform=true
   this.success=false
+  this.fail=false
 }
 
 
