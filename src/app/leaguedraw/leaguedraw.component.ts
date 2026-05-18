@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { MatchService } from '../match.service';
 import { LeaguesService } from '../league.service';
 import { ActivatedRoute } from '@angular/router';
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, FormsModule } from '@angular/forms';
 import { AuthService } from '../auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -15,7 +15,7 @@ import { MatIconModule } from '@angular/material/icon';
 @Component({
   selector: 'app-leaguedraw',
   standalone: true,
-  imports: [MatFormFieldModule,MatSelectModule,CommonModule,MatTableModule,MatIconModule],
+  imports: [MatFormFieldModule,MatSelectModule,CommonModule,MatTableModule,MatIconModule,FormsModule],
   templateUrl: './leaguedraw.component.html',
   styleUrl: './leaguedraw.component.css'
 })
@@ -31,10 +31,13 @@ currentSeason: any;
   dataSource = new MatTableDataSource<any>([]);
   numofplayersleft:any=16
   seasons:any[]=[]
+isChecked: any;
+
   constructor(private seasonservice: SeasonService,private matchService: MatchService, private leagueService: LeaguesService,private route: ActivatedRoute,private fb: FormBuilder,private AuthService: AuthService) {
   
    }
    ngOnInit(): void {
+   this.isChecked = false;
   this.loadLeagues();
   this.seasonservice.getSeasons().subscribe(data=>{
 this.seasons=data
@@ -88,8 +91,9 @@ console.log(this.playerlistfordraw)
 console.log(this.players)
    }
    manualdraw(){
-   
-    this.leagueService.manualdraw(this.playerlistfordraw,this.seasonservice.getCurrentSeason(),this.selectedLeagueId).subscribe(
+    console.log(this.isChecked)
+   let rematch_draw=this.isChecked
+    this.leagueService.manualdraw(this.playerlistfordraw,this.seasonservice.getCurrentSeason(),this.selectedLeagueId,rematch_draw).subscribe(
       (response) => {
       console.log(response)
        

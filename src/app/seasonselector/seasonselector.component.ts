@@ -14,7 +14,7 @@ import { filter } from 'rxjs';
 })
 export class SeasonselectorComponent {
   // Example seasons
-  currentSeason: number=1;
+  currentSeason: number=8;
 seasons :any[]=[]
   hideLayout:any;
   

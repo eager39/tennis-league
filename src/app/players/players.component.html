@@ -31,7 +31,7 @@
   <ul>
    
     <li *ngFor="let player of players" >
-      {{ player.name   }} 
+      {{ player.name   }} <small *ngIf="authService.isAuthenticated() && authService.hasRole('admin')">prejšna pozicija: {{player.ligapozicija}}</small>
       <span *ngIf="editplayers && authService.isAuthenticated() && authService.hasRole('admin')">
       <mat-icon (click)="changeleague(player.id) " aria-hidden="false" aria-label="Example home icon" fontIcon="edit"></mat-icon>
       <mat-icon (click)="removeplayer(player.id) " aria-hidden="false" aria-label="Example home icon" fontIcon="delete"></mat-icon>

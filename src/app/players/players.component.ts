@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { DataService } from '../data.service';
 import { CommonModule, NgFor } from '@angular/common';
 import { LeaguesService } from '../league.service';
@@ -27,12 +27,18 @@ export class PlayersComponent implements OnInit {
   editplayers=false
   selectedplayerid:any
   signups: any;
-  constructor(private leaguesService: LeaguesService,private route: ActivatedRoute,public authService: AuthService,private loadingService: LoadingService,public leagueService: LeaguesService) {}
+  constructor(private cdr: ChangeDetectorRef,private leaguesService: LeaguesService,private route: ActivatedRoute,public authService: AuthService,private loadingService: LoadingService,public leagueService: LeaguesService) {}
 
-  ngOnInit() {
-    this.leaguesService.getLeagues().subscribe(data => {
-      this.leagues = data;
+
+
+  updateleagues(){
+     this.leaguesService.getLeagues().subscribe(data => {
+     this.leagues = [...data];
+      
     });
+  }
+  ngOnInit() {
+  this.updateleagues()
     this.route.params.subscribe(
       (params: Params) => {
         this.selectedLeagueId = params["id"];
@@ -79,8 +85,12 @@ export class PlayersComponent implements OnInit {
      this.leaguesService.changeLeagueforPlayer(this.selectedplayerid,this.newleagueid).subscribe((data) => {
      if(data){
       alert("uspešno!")
+      this.updateleagues()
+     
       this.onLeagueChange()
+     
       this.showleague=false
+      
      }else{
       alert("fail")
      }

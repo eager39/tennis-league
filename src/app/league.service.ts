@@ -82,9 +82,9 @@ downloadFile(fileName: string, league: number): Observable<Blob> {
   
     return this.http.post(environment.apiUrl+"/generate-schedule", { 'liga': league,"season":season});
   }
-  manualdraw(player_ids:any,season:number,league:any): Observable<any> {
+  manualdraw(player_ids:any,season:number,league:any,rematch_draw:any): Observable<any> {
   
-    return this.http.post(environment.apiUrl+"/generate-schedule2", { 'player_Ids': player_ids,"season":season,'liga':league});
+    return this.http.post(environment.apiUrl+"/generate-schedule2", { 'player_Ids': player_ids,"season":season,'liga':league,"rematch_draw":rematch_draw});
   }
   lockstandings(seasonid:number): Observable<any> {
   

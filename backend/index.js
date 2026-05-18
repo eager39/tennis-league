@@ -1038,7 +1038,7 @@ async function pdfstandings(filelocation,league_id) {
      // const leagueId = league.league_id;
      // const matches = await getUnplayedMatches(seasonid, leagueId);
     
-       matches = await getStandingsperleague(league_id,4);
+       matches = await getStandingsperleague(league_id,8);
     
       
      
@@ -1106,10 +1106,10 @@ app.get("/download/:fileName/:league",verifyToken("admin"), async (req, res) => 
 //  pdfstandings("cetrta_liga_razvrstitev",4)
 switch (fileName) {
   case "Neodigrane moske tekme.pdf":
-    await generatepdfmenunplayed(4,"m","Neodigrane moske tekme");
+    await generatepdfmenunplayed(8,"m","Neodigrane moske tekme");
     break;
   case "Neodigrane zenske tekme.pdf":
- await generatepdfmenunplayed(4,"ž","Neodigrane zenske tekme");
+ await generatepdfmenunplayed(8,"ž","Neodigrane zenske tekme");
     break;
   case "prva_liga_razvrstitev.pdf":
   await pdfstandings("prva_liga_razvrstitev",1)
@@ -1127,14 +1127,14 @@ await pdfstandings("druga_liga_razvrstitev",2)
 await pdfstandings("zenska_liga_razvrstitev",6)
     break;
     case "rezultati_moski.pdf":
-await generepdfwithplayedmatches(4,"m","rezultati_moski")
+await generepdfwithplayedmatches(8,"m","rezultati_moski")
     break;
       case "rezultati_zenske.pdf":
-await generepdfwithplayedmatches(4,"ž","rezultati_zenske")
+await generepdfwithplayedmatches(8,"ž","rezultati_zenske")
     break;
   
 }
-generepdfwithplayedmatches(4,"ž","odigrane tekme")
+generepdfwithplayedmatches(8,"ž","odigrane tekme")
  
 
   if (!allowedFiles.includes(fileName)) {
@@ -1472,7 +1472,7 @@ ORDER BY
 });
 
 // Function to generate the round-robin schedule
-function generateRoundRobinSchedule(playerArray) {
+function generateRoundRobinSchedule(playerArray,rematch_draw) {
 
 
 
@@ -1532,7 +1532,7 @@ for (let r = 1; r < 1 + playerArray.length - 1; r++) {
     matches = [...matches, ...round];
 }
 const totalRounds = playerArray.length - 1;
-if(totalRounds<9){
+if(rematch_draw==true){
   const secondHalf = matches
     .filter(m => m.round <= totalRounds)
     .map(m => ({
@@ -2012,7 +2012,7 @@ ORDER BY
 //   );
 // });
 app.post("/generate-schedule2",verifyToken("admin"),async (req, res) => {
-  const { player_Ids, season } = req.body;
+  const { player_Ids, season,rematch_draw } = req.body;
  
   // Fetch player IDs
 
@@ -2640,6 +2640,53 @@ app.get("/standings/:id", (req, res) => {
 });
 
 app.post("/update-match-result", verifyToken("user,admin"), (req, res) => {
+
+function parseMatch(match, resultString) {
+  const sets = resultString.split(',');
+
+  let homeSets = 0;
+  let awaySets = 0;
+
+  let homeGames = 0;
+  let awayGames = 0;
+
+  const setDetails = [];
+
+  for (const set of sets) {
+    const [h, a] = set.split('-').map(Number);
+
+    homeGames += h;
+    awayGames += a;
+
+    if (h > a) homeSets++;
+    else if (a > h) awaySets++;
+
+    setDetails.push({ home: h, away: a });
+  }
+
+  // Winner
+  let winnerId = null;
+  if (homeSets > awaySets) winnerId = match.home_id;
+  else if (awaySets > homeSets) winnerId = match.away_id;
+
+  return {
+    winnerId,
+
+    // sets
+    homeSets,
+    awaySets,
+    setDiff: homeSets - awaySets,
+
+    // games
+    homeGames,
+    awayGames,
+    gameDiff: homeGames - awayGames,
+
+    // raw breakdown (useful for debugging / UI)
+    sets: setDetails
+  };
+}
+
   const { id, result } = req.body;
   const userId = req.user.id;
   const role = req.user.role;
@@ -2650,7 +2697,7 @@ app.post("/update-match-result", verifyToken("user,admin"), (req, res) => {
 
   // First, fetch the match to validate ownership
   const checkQuery = `
-   SELECT p.user_id,p.name as home,p_away.name as away
+   SELECT p.user_id,p.name as home,p_away.name as away,s.home_player as home_id,s.away_player as away_id
     FROM schedule s
     JOIN players_season ps_home ON s.home_player = ps_home.id
   	join players p on ps_home.player_id=p.id
@@ -2670,7 +2717,9 @@ app.post("/update-match-result", verifyToken("user,admin"), (req, res) => {
     }
 
     const match = results[0];
-   
+   const gamestats=parseMatch(results[0],result)
+   console.log(gamestats)
+   console.log(gamestats.winnerId)
     // Check if the user is the home player or has admin role
     if (role !== "admin" && match.user_id !== userId) {
       return res.status(403).json({ error: "Unauthorized to update this match" });
@@ -2678,11 +2727,11 @@ app.post("/update-match-result", verifyToken("user,admin"), (req, res) => {
 
     // Proceed to update the result
     const updateQuery = `
-      UPDATE schedule SET result = ?,edited_by=? 
+      UPDATE schedule SET result = ?,edited_by=? ,gamediff=?,setdiff=?,winner=?
       WHERE id = ? AND result_confirmed = 0
     `;
-    sendEmail("krizaniczan@gmail.com",match.home+" vs "+match.away+" " +result+" uporabnik "+req.user.email,"novi rezultat")
-    connection.query(updateQuery, [result,userId, id], (err, updateResult) => {
+   // sendEmail("krizaniczan@gmail.com",match.home+" vs "+match.away+" " +result+" uporabnik "+req.user.email,"novi rezultat")
+    connection.query(updateQuery, [result,userId, gamestats.gameDiff,gamestats.setDiff,gamestats.winnerId,id], (err, updateResult) => {
       if (err) {
         console.error("Error updating match result:", err);
         return res.status(500).json({ error: "Failed to update match result" });
@@ -2815,7 +2864,7 @@ app.post("/removePlayer",verifyToken("admin"), (req, res) => {
 //   const { id} = req.body;
 //   const {season} =req.headers
 //  console.log(req.headers)
-//   const query = "DELETE schedule FROM schedule LEFT JOIN players_season on players_season.id=schedule.home_player WHERE schedule.result='no result' and players_season.season_id=? and players_season.league_id=?";
+//   const query = "DELETE schedule FROM schedule LEFT JOIN players_season on players_season.id=schedule.home_player WHERE players_season.season_id=? and players_season.league_id=?";
 
 //   connection.query(query, [season,id], (err, results) => {
 //     if (err) {
@@ -2943,11 +2992,20 @@ app.get("/leagues", (req, res) => {
   const seasonId = req.headers.season;
 console.log(seasonId)
   const query = `
-       SELECT DISTINCT ps.league_id, l.*
-FROM players_season ps
+       SELECT
+    l.id AS league_id,
+    l.*,
+    COUNT(ps.id) AS player_count
 
-JOIN leagues l ON ps.league_id = l.id
-WHERE ps.season_id = ?;
+FROM leagues l
+
+LEFT JOIN players_season ps
+    ON ps.league_id = l.id
+   AND ps.season_id = ?
+
+GROUP BY l.id
+
+ORDER BY l.id ASC;
     `;
 
   connection.query(query, [seasonId], (err, results) => {
@@ -2997,11 +3055,32 @@ app.get("/leagues/:id/players", (req, res) => {
   const leagueId = req.params.id;
   const seasonId = req.headers.season;
   const query = `
-      SELECT  p.name,ps.id,ps.player_id
-      FROM players p
-      JOIN players_season ps ON p.id = ps.player_id
-      WHERE ps.league_id = ? and ps.season_id = ?
-      ORDER BY p.name ASC
+      SELECT
+    p.name,
+    current_ps.id,
+    current_ps.player_id,
+    CONCAT(prev_ps.league_id, '.', st.position) AS ligapozicija
+
+FROM players p
+
+-- current season
+JOIN players_season current_ps
+    ON p.id = current_ps.player_id
+   AND current_ps.league_id = ?
+   AND current_ps.season_id = ?
+
+-- find previous season via seasons table
+JOIN season s
+    ON s.id = current_ps.season_id
+
+LEFT JOIN players_season prev_ps
+    ON p.id = prev_ps.player_id
+   AND prev_ps.season_id = (SELECT id FROM season where id<current_ps.season_id  ORDER BY id DESC LIMIT 1)
+
+LEFT JOIN standings st
+    ON prev_ps.id = st.player
+
+ORDER BY prev_ps.league_id,st.position ASC;
     `;
 
   connection.query(query, [leagueId, seasonId], (err, results) => {

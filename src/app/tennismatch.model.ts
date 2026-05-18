@@ -10,6 +10,7 @@ export interface TennisMatch {
     deadline: Date;
 }
 export interface leagues {
+player_count: number;
  league_id:number;
  id:number;
  name:string;
