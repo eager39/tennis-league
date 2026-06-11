@@ -1030,6 +1030,7 @@ async function generepdfwithplayedmatches(seasonid,league,filelocation) {
 
 
 async function pdfstandings(filelocation,league_id) {
+  
   try {
     let matches=[]
    // const leagues = await getLeaguesWithUnplayedMatches(seasonid);
@@ -1051,7 +1052,7 @@ async function pdfstandings(filelocation,league_id) {
         );
         //console.log(`✅ Report generated for league ${leagueId}`);
       } else {
-        console.log(`ℹ️ No matches to report for league ${leagueId}`);
+        console.log(`ℹ️ No matches to report for league ${league_id}`);
       }
    // }
   } catch (err) {
@@ -1092,9 +1093,87 @@ const allowedFiles = [
   "Neodigrane zenske tekme.pdf",
   "Neodigrane moske tekme.pdf",
   "rezultati_moski.pdf",
-  "rezultati_zenske.pdf"
+  "rezultati_zenske.pdf",
+  "*_liga_razvrstitev.pdf"
 
 ];
+app.get("/men_results",async (req,res) =>{
+  console.log("haha")
+ const fileName="rezultati_moski.pdf"
+  await generepdfwithplayedmatches(8,"m","rezultati_moski")
+   if (!allowedFiles.includes(fileName)) {
+    return res.status(400).send("Invalid file request");
+  }
+
+  const filePath = path.join(__dirname, fileName);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("File not found");
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename=${fileName}`);
+
+  const stream = fs.createReadStream(filePath);
+  stream.pipe(res);
+
+  stream.on("error", (err) => {
+    console.error("Stream error:", err);
+    res.status(500).end();
+  });
+})
+app.get("/women_results",async (req,res) =>{
+ 
+ const fileName="rezultati_zenske.pdf"
+  await generepdfwithplayedmatches(8,"ž","rezultati_zenske")
+   if (!allowedFiles.includes(fileName)) {
+    return res.status(400).send("Invalid file request");
+  }
+
+  const filePath = path.join(__dirname, fileName);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("File not found");
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename=${fileName}`);
+
+  const stream = fs.createReadStream(filePath);
+  stream.pipe(res);
+
+  stream.on("error", (err) => {
+    console.error("Stream error:", err);
+    res.status(500).end();
+  });
+})
+app.get("/men_standings/:league",async (req,res) =>{
+  const league = parseInt(req.params.league, 10);
+  
+  await pdfstandings("druga_liga_razvrstitev",league)
+ const fileName="druga_liga_razvrstitev.pdf"
+ 
+   if (!allowedFiles.includes(fileName)) {
+    return res.status(400).send("Invalid file request");
+  }
+
+  const filePath = path.join(__dirname, fileName);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("File not found");
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename=${fileName}`);
+
+  const stream = fs.createReadStream(filePath);
+  stream.pipe(res);
+
+  stream.on("error", (err) => {
+    console.error("Stream error:", err);
+    res.status(500).end();
+  });
+})
 
 app.get("/download/:fileName/:league",verifyToken("admin"), async (req, res) => { 
    const { fileName } = req.params;
@@ -1134,7 +1213,7 @@ await generepdfwithplayedmatches(8,"ž","rezultati_zenske")
     break;
   
 }
-generepdfwithplayedmatches(8,"ž","odigrane tekme")
+//generepdfwithplayedmatches(8,"ž","odigrane tekme")
  
 
   if (!allowedFiles.includes(fileName)) {
